@@ -197,7 +197,7 @@ export default function AdminPage() {
   const phaseInfo = PHASE_COLORS[session?.phase || "setup"];
   const nextPhase = session ? getNextPhaseInfo(session.phase) : null;
   const phaseIdx = PHASES.indexOf(session?.phase || "setup");
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin = typeof window !== "undefined" ? (window.location.hostname === "localhost" ? "https://nominations-frontend.vercel.app" : window.location.origin) : "";
 
   return (
     <div className="min-h-screen text-slate-800" style={{ background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)" }}>
