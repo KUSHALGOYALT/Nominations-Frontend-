@@ -187,9 +187,15 @@ export default function AdminPage() {
   const nextPhase = session ? getNextPhaseInfo(session.phase) : null;
   const phaseIdx = PHASES.indexOf(session?.phase || "setup");
 
-  // Use current origin for QR codes so it works on localhost AND production once deployed
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const sessionUrl = `${origin}/vote`;
+  // Use backend scan endpoint for QR code as requested
+  // This expects the backend to be at NEXT_PUBLIC_API_URL or default
+  const apiUrl = typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api")
+    : "";
+  // The backend scan endpoint is at /api/scan (assuming /api prefix in main urls)
+  // But wait, my local setup might differ.
+  // In production: backend.onrender.com/api/scan -> redirects to frontend/vote
+  const sessionUrl = `${apiUrl}/scan`;
 
   // Analytics Data Preparation
   // We want to show nominations count per nominee
