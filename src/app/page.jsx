@@ -40,14 +40,14 @@ function HomeContent() {
       {/* ══════════════════════════════════════════
           HERO — full-viewport Three.js section
       ══════════════════════════════════════════ */}
-      <section className="relative min-h-screen flex flex-col bg-[#050d1a]">
+      <section className="relative min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #ffffff 100%)" }}>
 
-        {/* Deep radial vignette so text pops */}
+        {/* Deep radial vignette for depth */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% 50%, transparent 30%, #050d1a 100%)",
+              "radial-gradient(circle at 50% 50%, transparent 0%, rgba(0,0,0,0.2) 100%)",
             zIndex: 1,
           }}
         />
@@ -65,8 +65,6 @@ function HomeContent() {
               className="h-12 w-auto object-contain group-hover:opacity-90 transition-opacity"
             />
           </a>
-
-          {/* Pill badge - REMOVED per request */}
         </nav>
 
         {/* ── Hero copy (vertically centred in remaining space) ── */}
@@ -76,27 +74,25 @@ function HomeContent() {
         >
           {/* Tiny label */}
           <p
-            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4 text-teal-400"
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4 text-blue-200"
           >
             Hexa Climate ✦ Fortnightly Goal Meeting
           </p>
 
           {/* Main headline */}
           <h1
-            className="text-5xl sm:text-7xl font-extrabold leading-tight mb-4 text-white"
+            className="text-5xl sm:text-7xl font-extrabold leading-tight mb-4 text-white drop-shadow-md"
           >
-            Something <span className="text-teal-400">Recognizing</span>
+            <span className="text-white">Recognizing</span>
             <br />
             Best Performance
           </h1>
 
           {/* Subline */}
           <p
-            className="text-base sm:text-lg text-slate-400 max-w-lg mx-auto mb-10 leading-relaxed"
+            className="text-base sm:text-lg text-blue-100 max-w-lg mx-auto mb-10 leading-relaxed font-medium"
           >
             Based on self nomination & voting
-            <br />
-            Manage your team&apos;s recognition sessions efficiently.
           </p>
 
           {/* CTA buttons */}
@@ -141,43 +137,37 @@ function HomeContent() {
         className="px-6 sm:px-12 py-20 flex items-center justify-center"
       >
         <div
-          className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(94,234,212,0.15)",
-          }}
+          className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl bg-white/10 backdrop-blur-md border border-white/20"
         >
           {/* Top gradient bar */}
           <div
-            className="px-8 py-6 flex items-center gap-4"
-            style={{ background: "linear-gradient(135deg, #0F766E22, #14B8A622)" }}
+            className="px-8 py-6 flex items-center gap-4 bg-white/10"
           >
             <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
-              style={{ background: "rgba(20,184,166,0.15)", border: "1px solid rgba(20,184,166,0.3)" }}
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-xl bg-blue-100/20 border border-blue-200/30"
             >
               🔐
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Admin Login</h2>
-              <p className="text-teal-400 text-xs mt-0.5">Manage sessions &amp; participants</p>
+              <p className="text-blue-100 text-xs mt-0.5">Manage sessions &amp; participants</p>
             </div>
           </div>
 
           <div className="px-8 py-8">
             {expiredMessage && (
-              <p className="mb-4 text-sm text-amber-400" role="alert">
+              <p className="mb-4 text-sm text-yellow-300" role="alert">
                 Session expired or wrong password. Please log in again.
               </p>
             )}
             {loginError && (
-              <p className="mb-4 text-sm text-red-400" role="alert">
+              <p className="mb-4 text-sm text-red-300" role="alert">
                 {loginError}
               </p>
             )}
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-blue-50 mb-2">
                   Password
                 </label>
                 <input
@@ -185,18 +175,13 @@ function HomeContent() {
                   name="password"
                   placeholder="Enter admin password"
                   autoComplete="current-password"
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-                  style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(94,234,212,0.2)",
-                  }}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-slate-900 bg-white/90 border border-white/50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all shadow-inner"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-xl font-semibold text-white text-sm transition-all hover:opacity-90 active:scale-[0.98] shadow-lg disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #0F766E, #14B8A6)" }}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-blue-900 text-sm transition-all hover:opacity-90 active:scale-[0.98] shadow-lg disabled:opacity-60 bg-white hover:bg-blue-50"
               >
                 {loading ? "Logging in…" : "Log in to Admin Panel →"}
               </button>
@@ -204,12 +189,12 @@ function HomeContent() {
 
             {/* Divider */}
             <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px" style={{ background: "rgba(94,234,212,0.12)" }} />
-              <span className="text-xs text-slate-500">Hexa Climate</span>
-              <div className="flex-1 h-px" style={{ background: "rgba(94,234,212,0.12)" }} />
+              <div className="flex-1 h-px bg-blue-200/20" />
+              <span className="text-xs text-blue-100">Hexa Climate</span>
+              <div className="flex-1 h-px bg-blue-200/20" />
             </div>
 
-            <p className="text-center text-xs text-slate-500">
+            <p className="text-center text-xs text-blue-100/70">
               Session Management Console
             </p>
           </div>
@@ -218,8 +203,7 @@ function HomeContent() {
 
       {/* Footer */}
       <footer
-        className="text-center py-8 text-xs text-slate-600 border-t"
-        style={{ borderColor: "rgba(94,234,212,0.08)" }}
+        className="text-center py-8 text-xs text-blue-900/60 border-t border-blue-900/10"
       >
         © 2026 Hexa Climate · Best Performer Recognition System
       </footer>
