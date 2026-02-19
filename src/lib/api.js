@@ -1,4 +1,4 @@
-const API_BASE = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api") : "";
+const API_BASE = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api") : "";
 
 export function checkAdminPassword(password) {
   return fetch(`${API_BASE}/auth/check`, {
