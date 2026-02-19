@@ -117,6 +117,28 @@ function VoteContent() {
     );
   }
 
+  // ── SESSION STATUS CHECKS (Before Join) ──
+  if (!session) {
+    return (
+      <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
+        <p className="text-xl text-slate-500">No active session at the moment.</p>
+        <p className="text-sm text-slate-400 mt-2">Please check back later.</p>
+      </div>
+    );
+  }
+
+  if (session.phase === "closed") {
+    return (
+      <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
+        <div className="text-center">
+          <p className="text-4xl mb-4">🔒</p>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Session Closed</h1>
+          <p className="text-slate-500">The session "{session.title}" has ended.</p>
+        </div>
+      </div>
+    );
+  }
+
   // ── JOIN SCREEN ──
   if (!name) {
     return (
@@ -126,6 +148,10 @@ function VoteContent() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-slate-900 mb-2">Join Session</h1>
             <p className="text-slate-500 text-sm">Enter your name to participate in the recognition session.</p>
+            <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+              <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">Current Session</p>
+              <p className="text-slate-800 font-medium">{session.title}</p>
+            </div>
           </div>
 
           <form onSubmit={handleJoin} className="space-y-6">

@@ -136,7 +136,18 @@ export default function AdminPage() {
     setAdvanceLoading(true);
     const res = await patchSession({ session_id: session.id, phase: next }, getAdminPassword());
     setAdvanceLoading(false);
-    if (res.error) { if (res.error === "Unauthorized") handleUnauthorized(); else setError(res.error); return; }
+    if (res.error) {
+      if (res.error === "Unauthorized") {
+        handleUnauthorized();
+      } else {
+        setError(res.error);
+        // If we get a transition error, our state might be stale. Reload.
+        if (res.error.includes("Cannot transition")) {
+          loadSession();
+        }
+      }
+      return;
+    }
     setSession(res.session);
     showSuccess(`Phase advanced to ${PHASE_LABELS[next]}!`);
     loadSession();
