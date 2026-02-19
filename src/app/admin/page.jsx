@@ -70,7 +70,12 @@ export default function AdminPage() {
 
   const loadSession = useCallback(async () => {
     const data = await getSession();
-    setSession(data.session ?? null);
+    // If session is closed, treat as null so we show the "Create New Session" form
+    if (data.session && data.session.phase === "closed") {
+      setSession(null);
+    } else {
+      setSession(data.session ?? null);
+    }
 
     // Load nominations for management/analytics
     if (data.session) {
@@ -299,6 +304,19 @@ export default function AdminPage() {
                       {nextPhase.label}
                     </button>
                     <p className="text-xs text-slate-400 font-medium">Next Step</p>
+                  </div>
+                )}
+
+                {session.phase === "closed" && (
+                  <div className="flex flex-col items-end gap-2">
+                    <button
+                      onClick={() => setSession(null)}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm hover:opacity-95 transition-all shadow-lg hover:shadow-blue-500/25 flex-shrink-0 bg-slate-700 hover:bg-slate-800 active:scale-95"
+                    >
+                      <span className="text-lg">➕</span>
+                      Start New Session
+                    </button>
+                    <p className="text-xs text-slate-400 font-medium">Archive & New</p>
                   </div>
                 )}
               </div>
