@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { checkAdminPassword } from "@/lib/api";
 
-const ThreeBackground = dynamic(() => import("../components/ThreeBackground"), { ssr: false });
-
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -42,10 +40,7 @@ function HomeContent() {
       {/* ══════════════════════════════════════════
           HERO — full-viewport Three.js section
       ══════════════════════════════════════════ */}
-      <section className="relative min-h-screen flex flex-col">
-
-        {/* Three.js canvas fills the hero */}
-        <ThreeBackground />
+      <section className="relative min-h-screen flex flex-col bg-[#050d1a]">
 
         {/* Deep radial vignette so text pops */}
         <div
@@ -65,27 +60,13 @@ function HomeContent() {
           <a href="/" className="flex items-center gap-2 group">
             {/* Real Hexa Climate logo — white version for dark bg */}
             <img
-              src="/hexa-logo.png"
+              src="/hexa-logo-white.svg"
               alt="Hexa Climate"
               className="h-12 w-auto object-contain group-hover:opacity-90 transition-opacity"
             />
           </a>
 
-          {/* Pill badge */}
-          <div
-            className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold"
-            style={{
-              background: "rgba(20,184,166,0.12)",
-              border: "1px solid rgba(20,184,166,0.3)",
-              color: "#5eead4",
-            }}
-          >
-            <span
-              className="w-2 h-2 rounded-full bg-teal-400 inline-block"
-              style={{ animation: "pulseGlow 2s ease-in-out infinite" }}
-            />
-            Fortnightly Cycle Active
-          </div>
+          {/* Pill badge - REMOVED per request */}
         </nav>
 
         {/* ── Hero copy (vertically centred in remaining space) ── */}
@@ -95,43 +76,32 @@ function HomeContent() {
         >
           {/* Tiny label */}
           <p
-            className="text-xs font-semibold tracking-[0.25em] uppercase mb-6 text-teal-400"
-            style={{ animation: "fadeInUp 0.6s ease-out both" }}
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4 text-teal-400"
           >
-            Hexa Climate ✦ Recognition Program
+            Hexa Climate ✦ Fortnightly Goal Meeting
           </p>
 
           {/* Main headline */}
           <h1
-            className="text-5xl sm:text-7xl font-extrabold leading-tight mb-6"
-            style={{ animation: "fadeInUp 0.75s ease-out 0.1s both" }}
+            className="text-5xl sm:text-7xl font-extrabold leading-tight mb-4 text-white"
           >
-            <span
-              style={{
-                backgroundImage:
-                  "linear-gradient(135deg, #ffffff 0%, #5eead4 40%, #14B8A6 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              Recognize
-            </span>
+            Something <span className="text-teal-400">Recognizing</span>
             <br />
-            <span className="text-white">Excellence</span>
+            Best Performance
           </h1>
 
           {/* Subline */}
           <p
-            className="text-base sm:text-lg text-slate-400 max-w-lg mx-auto mb-12 leading-relaxed"
-            style={{ animation: "fadeInUp 0.75s ease-out 0.2s both" }}
+            className="text-base sm:text-lg text-slate-400 max-w-lg mx-auto mb-10 leading-relaxed"
           >
+            Based on self nomination & voting
+            <br />
             Manage your team&apos;s recognition sessions efficiently.
           </p>
 
           {/* CTA buttons */}
           <div
             className="flex flex-col sm:flex-row items-center gap-4"
-            style={{ animation: "fadeInUp 0.75s ease-out 0.3s both" }}
           >
             <button
               onClick={() =>
@@ -154,7 +124,6 @@ function HomeContent() {
           {/* Scroll hint */}
           <div
             className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1"
-            style={{ animation: "bounce 2s ease-in-out infinite" }}
           >
             <span className="text-xs text-slate-500 tracking-widest uppercase">Scroll</span>
             <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
