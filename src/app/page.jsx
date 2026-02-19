@@ -65,10 +65,9 @@ function HomeContent() {
           <a href="/" className="flex items-center gap-2 group">
             {/* Real Hexa Climate logo — white version for dark bg */}
             <img
-              src="https://hexaclimate.com/wp-content/uploads/2023/11/Hexa-Logo-with-black-text-1.svg"
+              src="/hexa-logo.png"
               alt="Hexa Climate"
-              className="h-9 w-auto brightness-0 invert group-hover:opacity-90 transition-opacity"
-              style={{ filter: "brightness(0) invert(1)" }}
+              className="h-12 w-auto object-contain group-hover:opacity-90 transition-opacity"
             />
           </a>
 
