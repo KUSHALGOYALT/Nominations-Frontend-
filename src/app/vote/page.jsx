@@ -156,13 +156,13 @@ function VoteContent() {
 
           <form onSubmit={handleJoin} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Name</label>
+              <label className="block text-sm font-bold text-black mb-2 uppercase tracking-wide">Enter Your Name</label>
               <input
                 type="text"
                 value={inputName}
                 onChange={(e) => setInputName(e.target.value)}
-                placeholder="e.g. John Doe"
-                className="w-full rounded-xl px-4 py-3 bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Type your name here..."
+                className="w-full rounded-xl px-4 py-4 bg-white border-2 border-slate-300 text-black placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/20 text-lg shadow-sm"
                 required
               />
             </div>
