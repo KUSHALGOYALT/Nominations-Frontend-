@@ -55,15 +55,37 @@ function VoteContent() {
     const storedName = typeof window !== "undefined" ? localStorage.getItem("hexa_name") : null;
     if (storedName) setName(storedName);
 
-    getSession().then(data => {
-      if (data?.session) {
-        setSession(data.session);
-        if ((data.session.phase || "").toLowerCase() === "voting") {
-          getNominations().then(res => setNominations(res.nominations || []));
-        }
-      }
+    let cancelled = false;
+    const timeoutId = setTimeout(() => {
+      if (cancelled) return;
       setLoading(false);
-    });
+      setError("Taking too long — check your connection and try again.");
+    }, 12000);
+
+    getSession()
+      .then(data => {
+        if (cancelled) return;
+        if (data?.session) {
+          setSession(data.session);
+          if ((data.session.phase || "").toLowerCase() === "voting") {
+            getNominations().then(res => !cancelled && setNominations(res.nominations || []));
+          }
+        }
+        setError("");
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("Couldn't load session. Check your connection or try again.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          clearTimeout(timeoutId);
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; clearTimeout(timeoutId); };
   }, []);
 
   // Poll session so when admin moves to voting, we show voting UI without refresh
@@ -137,10 +159,47 @@ function VoteContent() {
     }
   }
 
+  const handleRetry = () => {
+    setError("");
+    setLoading(true);
+    getSession()
+      .then(data => {
+        if (data?.session) {
+          setSession(data.session);
+          if ((data.session.phase || "").toLowerCase() === "voting") {
+            getNominations().then(res => setNominations(res.nominations || []));
+          }
+        }
+      })
+      .catch(() => setError("Couldn't load session. Try again."))
+      .finally(() => setLoading(false));
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-        <p className="text-slate-500 animate-pulse">Loading...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }}>
+        <div className="w-10 h-10 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
+        <p className="text-slate-500 text-sm mt-4">Loading session…</p>
+      </div>
+    );
+  }
+
+  // ── Load error (e.g. after scan, API unreachable) ──
+  if (error && !session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }}>
+        <div className="max-w-sm w-full bg-white border border-slate-200 rounded-2xl p-8 shadow-lg text-center">
+          <p className="text-4xl mb-4">📡</p>
+          <h1 className="text-xl font-bold text-slate-900 mb-2">Couldn’t load session</h1>
+          <p className="text-slate-600 text-sm mb-6">{error}</p>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
@@ -155,7 +214,7 @@ function VoteContent() {
     );
   }
 
-  if (session.phase === "closed") {
+  if ((session.phase || "").toLowerCase() === "closed") {
     return (
       <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
         <div className="text-center">
