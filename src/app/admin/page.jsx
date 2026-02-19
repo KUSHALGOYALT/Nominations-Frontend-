@@ -192,10 +192,8 @@ export default function AdminPage() {
   const apiUrl = typeof window !== "undefined"
     ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api")
     : "";
-  // The backend scan endpoint is at /api/scan (assuming /api prefix in main urls)
-  // But wait, my local setup might differ.
-  // In production: backend.onrender.com/api/scan -> redirects to frontend/vote
-  const sessionUrl = `${apiUrl}/scan`;
+  // Updated path to avoid any confusion/caching: /qr-join
+  const sessionUrl = `${apiUrl}/qr-join`;
 
   // Analytics Data Preparation
   // We want to show nominations count per nominee
