@@ -21,6 +21,7 @@ function VoteContent() {
   // Local state tracking
   const [hasNominated, setHasNominated] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
+  const [skippedNomination, setSkippedNomination] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -39,26 +40,52 @@ function VoteContent() {
   const [voteNone, setVoteNone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    // 1. Check if name is already stored
-    const storedName = typeof window !== 'undefined' ? localStorage.getItem("hexa_name") : null;
-    if (storedName) {
-      setName(storedName);
-    }
-
-    // 2. Fetch Session Info
+  const loadSession = () => {
     getSession().then(data => {
       if (data && data.session) {
         setSession(data.session);
-        // Load nominations if in voting phase
-        if (data.session.phase === "voting") {
+        if ((data.session.phase || "").toLowerCase() === "voting") {
+          getNominations().then(res => setNominations(res.nominations || []));
+        }
+      }
+    });
+  };
+
+  useEffect(() => {
+    const storedName = typeof window !== "undefined" ? localStorage.getItem("hexa_name") : null;
+    if (storedName) setName(storedName);
+
+    getSession().then(data => {
+      if (data?.session) {
+        setSession(data.session);
+        if ((data.session.phase || "").toLowerCase() === "voting") {
           getNominations().then(res => setNominations(res.nominations || []));
         }
       }
       setLoading(false);
     });
-
   }, []);
+
+  // Poll session so when admin moves to voting, we show voting UI without refresh
+  useEffect(() => {
+    if (!session?.id) return;
+    const t = setInterval(loadSession, 5000);
+    return () => clearInterval(t);
+  }, [session?.id]);
+
+  // When phase is voting, ensure we have nominations list
+  useEffect(() => {
+    if ((session?.phase || "").toLowerCase() === "voting") {
+      getNominations().then(res => setNominations(res.nominations || []));
+    }
+  }, [session?.phase]);
+
+  // Pre-fill pitch name with joined name when entering nomination phase
+  useEffect(() => {
+    if (name && (session?.phase || "").toLowerCase() === "nomination" && !nomineeName) {
+      setNomineeName(name);
+    }
+  }, [name, session?.phase]);
 
   function handleJoin(e) {
     e.preventDefault();
@@ -75,6 +102,7 @@ function VoteContent() {
     setInputName("");
     setHasNominated(false);
     setHasVoted(false);
+    setSkippedNomination(false);
   }
 
   async function handleSubmitNomination(e) {
@@ -185,7 +213,7 @@ function VoteContent() {
 
   /* ── Current Phase Component ── */
   let content = null;
-  const phase = session?.phase;
+  const phase = (session?.phase || "").toLowerCase();
 
   if (!session) {
     content = <p className="text-slate-500">No active session at the moment.</p>;
@@ -204,44 +232,64 @@ function VoteContent() {
         <div className="bg-hexa-light border border-blue-200 p-6 rounded-2xl text-center">
           <p className="text-2xl mb-2">✅</p>
           <h3 className="text-lg font-semibold text-hexa-primary">Pitch Submitted!</h3>
-          <p className="text-sm text-slate-600 mt-3">
-            Thanks, {name}. Please wait for the voting phase.
-          </p>
+          <p className="text-sm text-slate-600 mt-3">Thanks, {name}. When the admin opens voting, you can vote here.</p>
           <button onClick={() => setSuccess("")} className="text-xs text-hexa-secondary underline mt-4">Submit another?</button>
+        </div>
+      );
+    } else if (skippedNomination) {
+      content = (
+        <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-center">
+          <p className="text-2xl mb-2">👍</p>
+          <h3 className="text-lg font-semibold text-slate-800">No pitch — you’ll just vote</h3>
+          <p className="text-sm text-slate-600 mt-3">When the admin opens the voting phase, this page will show the ballot. You can stay here or come back later.</p>
         </div>
       );
     } else {
       content = (
-        <form onSubmit={handleSubmitNomination} className="space-y-4 text-left">
+        <div className="space-y-4 text-left">
           <div className="bg-hexa-light border border-blue-200 p-4 rounded-xl text-sm text-hexa-primary mb-4">
-            <p><strong>Pitch Phase:</strong> Tell us why you should be recognized!</p>
+            <p><strong>Pitch phase:</strong> Tell us why you should be recognized (optional).</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Name (for pitch)</label>
-            <input
-              type="text"
-              value={nomineeName}
-              onChange={(e) => setNomineeName(e.target.value)}
-              placeholder="Enter your name..."
-              className="w-full rounded-xl px-4 py-3 bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <form onSubmit={handleSubmitNomination} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your name (for pitch)</label>
+              <input
+                type="text"
+                value={nomineeName}
+                onChange={(e) => setNomineeName(e.target.value)}
+                placeholder="Same as join name or different..."
+                className="w-full rounded-xl px-4 py-3 bg-white border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your pitch</label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Why should people vote for you?"
+                rows={4}
+                className="w-full rounded-xl px-4 py-3 bg-white border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 min-h-[120px] resize-y"
+              />
+            </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <button
+              type="submit"
+              disabled={submitting || !nomineeName?.trim() || !reason?.trim()}
+              className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+            >
+              {submitting ? "Submitting…" : "Submit Pitch"}
+            </button>
+          </form>
+          <div className="pt-2 border-t border-slate-200 text-center">
+            <button
+              type="button"
+              onClick={() => setSkippedNomination(true)}
+              className="text-sm text-slate-500 hover:text-slate-700 underline"
+            >
+              Skip — I’ll just vote later
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Pitch</label>
-            <textarea
-              value={reason} onChange={(e) => setReason(e.target.value)}
-              placeholder="Why should people vote for you?"
-              className="w-full rounded-xl px-4 py-3 bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-            />
-          </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button
-            type="submit" disabled={submitting || !nomineeName || !reason}
-            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
-          >
-            {submitting ? "Submitting..." : "Submit Pitch"}
-          </button>
-        </form>
+        </div>
       );
     }
   }
@@ -343,17 +391,19 @@ function VoteContent() {
         </div>
 
         {session && (
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 mb-8 text-center">
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 mb-6 text-center">
             <p className="text-xs text-blue-600 uppercase tracking-widest font-semibold mb-1">Active Session</p>
             <p className="font-medium text-lg text-slate-800">{session.title}</p>
             <div className="flex items-center justify-center gap-2 mt-2">
-              <span className={`w-2 h-2 rounded-full ${phase === 'nomination' ? 'bg-emerald-500' : phase === 'voting' ? 'bg-blue-500' : 'bg-slate-400'} animate-pulse`}></span>
-              <p className="text-xs text-slate-500 capitalize">{phase} Phase</p>
+              <span className={`w-2 h-2 rounded-full ${phase === "nomination" ? "bg-emerald-500" : phase === "voting" ? "bg-blue-500" : "bg-slate-400"} animate-pulse`} />
+              <p className="text-xs text-slate-500 capitalize">{phase} phase</p>
             </div>
           </div>
         )}
 
-        {content}
+        <div className="min-h-[280px]">
+          {content}
+        </div>
 
       </div>
 
