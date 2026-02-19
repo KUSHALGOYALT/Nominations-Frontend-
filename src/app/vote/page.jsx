@@ -139,15 +139,17 @@ function VoteContent() {
     );
   }
 
-  // ── JOIN SCREEN ──
+  // ── JOIN SCREEN (e.g. after scanning QR or opening /vote) ──
   if (!name) {
     return (
       <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
         <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
-        <div className="max-w-md w-full bg-white border border-blue-100 rounded-3xl p-8 shadow-2xl shadow-blue-900/10">
+        <div className="max-w-md w-full bg-white border border-blue-100 rounded-3xl p-8 shadow-2xl shadow-blue-900/10 relative z-10">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-slate-900 mb-2">Join Session</h1>
-            <p className="text-slate-500 text-sm">Enter your name to participate in the recognition session.</p>
+            <p className="text-slate-500 text-sm">
+              Scanned the QR code? Enter your name below to join this recognition session.
+            </p>
             <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">Current Session</p>
               <p className="text-slate-800 font-medium">{session.title}</p>
@@ -156,7 +158,7 @@ function VoteContent() {
 
           <form onSubmit={handleJoin} className="space-y-6">
             <div>
-              <label className="block text-sm font-bold text-black mb-2 uppercase tracking-wide">Enter Your Name</label>
+              <label className="block text-sm font-bold text-black mb-2 uppercase tracking-wide">Your name</label>
               <input
                 type="text"
                 value={inputName}
@@ -168,14 +170,15 @@ function VoteContent() {
             </div>
 
             <button
-              type="submit" disabled={!inputName}
+              type="submit"
+              disabled={!inputName.trim()}
               className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 transition-colors shadow-lg"
             >
-              Join Session
+              Continue
             </button>
           </form>
         </div>
-        <footer className="mt-8 text-xs text-slate-400 text-center">© 2026 Hexa Climate</footer>
+        <footer className="mt-8 text-xs text-slate-400 text-center relative z-10">© 2026 Hexa Climate</footer>
       </div>
     );
   }
