@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-slate-500 animate-pulse bg-blue-50">
+      <div className="flex flex-col items-center justify-center min-h-screen text-slate-500 animate-pulse bg-white">
         Loading session info...
       </div>
     );
@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
   if (!session) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-center bg-blue-50">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-center bg-white">
         <div className="text-4xl">⏳</div>
         <h2 className="text-2xl font-bold text-slate-800">No Active Session</h2>
         <p className="text-slate-500">Waiting for admin to create a session.</p>
@@ -41,7 +41,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen text-slate-800" style={{ background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)" }}>
+    <div className="min-h-screen text-slate-800 bg-white">
+      <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
       {/* Navbar / Header Area */}
       <nav className="flex items-center justify-between px-6 py-4 bg-white/70 backdrop-blur-md border-b border-blue-100/50 sticky top-0 z-10">
         <a href="/" className="flex items-center gap-2">

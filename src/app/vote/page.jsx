@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
-  checkParticipantToken,
-  getNominees,
+  getSession,
   getNominations,
   createNomination,
   createVote
@@ -12,13 +11,22 @@ import {
 
 function VoteContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
+  const router = useRouter();
+
+  // Simple Name-based Auth
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [participant, setParticipant] = useState(null);
   const [session, setSession] = useState(null);
-  const [userState, setUserState] = useState({ has_nominated: false, has_voted: false });
+
+  // Local state tracking
+  const [hasNominated, setHasNominated] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Join State
+  const [inputName, setInputName] = useState("");
 
   // Data for phases
   const [nominees, setNominees] = useState([]);
@@ -32,40 +40,54 @@ function VoteContent() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setError("No token provided.");
-      setLoading(false);
-      return;
+    // 1. Check if name is already stored
+    const storedName = typeof window !== 'undefined' ? localStorage.getItem("hexa_name") : null;
+    if (storedName) {
+      setName(storedName);
     }
 
-    checkParticipantToken(token).then((data) => {
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setParticipant(data.participant);
+    // 2. Fetch Session Info
+    getSession().then(data => {
+      if (data && data.session) {
         setSession(data.session);
-        setUserState({ has_nominated: data.has_nominated, has_voted: data.has_voted });
-
-        // Load phase-specific data
-        if (data.session?.phase === "voting" && !data.has_voted) {
+        // Load nominations if in voting phase
+        if (data.session.phase === "voting") {
           getNominations().then(res => setNominations(res.nominations || []));
         }
       }
       setLoading(false);
     });
-  }, [token]);
+
+  }, []);
+
+  function handleJoin(e) {
+    e.preventDefault();
+    if (!inputName.trim()) return;
+
+    // Save name locally
+    localStorage.setItem("hexa_name", inputName.trim());
+    setName(inputName.trim());
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("hexa_name");
+    setName("");
+    setInputName("");
+    setHasNominated(false);
+    setHasVoted(false);
+  }
 
   async function handleSubmitNomination(e) {
     e.preventDefault();
     if (!nomineeName || !reason) return;
     setSubmitting(true);
-    const res = await createNomination(token, nomineeName, reason);
+    const res = await createNomination(name, nomineeName, reason);
     setSubmitting(false);
     if (res.error) {
       setError(res.error);
     } else {
       setSuccess("Nomination submitted successfully!");
-      setUserState(prev => ({ ...prev, has_nominated: true }));
+      setHasNominated(true);
     }
   }
 
@@ -77,32 +99,57 @@ function VoteContent() {
     setSubmitting(true);
     // Send empty list if None is selected
     const payload = voteNone ? [] : selectedNominationIds;
-    const res = await createVote(token, payload);
+    const res = await createVote(name, payload);
     setSubmitting(false);
     if (res.error) {
       setError(res.error);
     } else {
       setSuccess("Vote submitted successfully!");
-      setUserState(prev => ({ ...prev, has_voted: true }));
+      setHasVoted(true);
     }
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-        <p className="text-slate-500 animate-pulse">Verifying token...</p>
+        <p className="text-slate-500 animate-pulse">Loading...</p>
       </div>
     );
   }
 
-  if (error) {
+  // ── JOIN SCREEN ──
+  if (!name) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl max-w-sm text-center shadow-lg">
-          <div className="text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-          <p className="text-sm opacity-90">{error}</p>
+      <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
+        <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
+        <div className="max-w-md w-full bg-white border border-blue-100 rounded-3xl p-8 shadow-2xl shadow-blue-900/10">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Join Session</h1>
+            <p className="text-slate-500 text-sm">Enter your name to participate in the recognition session.</p>
+          </div>
+
+          <form onSubmit={handleJoin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Name</label>
+              <input
+                type="text"
+                value={inputName}
+                onChange={(e) => setInputName(e.target.value)}
+                placeholder="e.g. John Doe"
+                className="w-full rounded-xl px-4 py-3 bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <button
+              type="submit" disabled={!inputName}
+              className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 transition-colors shadow-lg"
+            >
+              Join Session
+            </button>
+          </form>
         </div>
+        <footer className="mt-8 text-xs text-slate-400 text-center">© 2026 Hexa Climate</footer>
       </div>
     );
   }
@@ -123,26 +170,25 @@ function VoteContent() {
 
   // Nomination Phase
   else if (phase === "nomination") {
-    if (userState.has_nominated || success) {
+    if (hasNominated || success) {
       content = (
-        <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl text-center">
-          <p className="text-2xl mb-2"></p>
-          <h3 className="text-lg font-semibold text-emerald-700">Pitch Received!</h3>
-          <p className="text-sm text-emerald-600 mt-3">
-            Please wait for all nominations to come in.
-            <br />
-            <strong>You will vote right here</strong> when the voting phase starts.
+        <div className="bg-hexa-light border border-blue-200 p-6 rounded-2xl text-center">
+          <p className="text-2xl mb-2">✅</p>
+          <h3 className="text-lg font-semibold text-hexa-primary">Pitch Submitted!</h3>
+          <p className="text-sm text-slate-600 mt-3">
+            Thanks, {name}. Please wait for the voting phase.
           </p>
+          <button onClick={() => setSuccess("")} className="text-xs text-hexa-secondary underline mt-4">Submit another?</button>
         </div>
       );
     } else {
       content = (
         <form onSubmit={handleSubmitNomination} className="space-y-4 text-left">
-          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-sm text-blue-700 mb-4">
+          <div className="bg-hexa-light border border-blue-200 p-4 rounded-xl text-sm text-hexa-primary mb-4">
             <p><strong>Pitch Phase:</strong> Tell us why you should be recognized!</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Name</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Name (for pitch)</label>
             <input
               type="text"
               value={nomineeName}
@@ -159,9 +205,10 @@ function VoteContent() {
               className="w-full rounded-xl px-4 py-3 bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
             />
           </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit" disabled={submitting || !nomineeName || !reason}
-            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
           >
             {submitting ? "Submitting..." : "Submit Pitch"}
           </button>
@@ -172,12 +219,12 @@ function VoteContent() {
 
   // Voting Phase
   else if (phase === "voting") {
-    if (userState.has_voted || success) {
+    if (hasVoted || success) {
       content = (
-        <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl text-center">
+        <div className="bg-hexa-light border border-blue-200 p-6 rounded-2xl text-center">
           <p className="text-2xl mb-2">🗳️</p>
-          <h3 className="text-lg font-semibold text-emerald-700">Vote Cast</h3>
-          <p className="text-sm text-emerald-600 mt-1">Thanks for voting!</p>
+          <h3 className="text-lg font-semibold text-hexa-primary">Vote Cast</h3>
+          <p className="text-sm text-slate-600 mt-1">Thanks for voting, {name}!</p>
         </div>
       );
     } else if (nominations.length === 0) {
@@ -205,7 +252,7 @@ function VoteContent() {
 
       content = (
         <form onSubmit={handleSubmitVote} className="space-y-4 text-left">
-          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-sm text-blue-700 mb-4">
+          <div className="bg-hexa-light border border-blue-200 p-4 rounded-xl text-sm text-hexa-primary mb-4">
             <p><strong>Instructions:</strong> Select up to <strong>3</strong> candidates OR select "None of the Above".</p>
           </div>
 
@@ -242,9 +289,10 @@ function VoteContent() {
             </label>
 
           </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit" disabled={submitting || (!voteNone && selectedNominationIds.length === 0)}
-            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-4 shadow-lg"
+            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-4 shadow-lg"
           >
             {submitting ? "Submitting..." : "Cast Vote"}
           </button>
@@ -254,14 +302,15 @@ function VoteContent() {
   }
 
   return (
-    <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center" style={{ background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)" }}>
+    <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
+      <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
       <div className="max-w-md w-full bg-white border border-blue-100 rounded-3xl p-8 shadow-2xl shadow-blue-900/10">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-3xl shadow-lg mb-4 text-white">
+          <div className="w-16 h-16 bg-gradient-to-br from-hexa-primary to-hexa-secondary rounded-full flex items-center justify-center text-3xl shadow-lg mb-4 text-white">
             👋
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Hello!</h1>
-          <p className="text-slate-500 text-sm mt-1">{participant.email}</p>
+          <h1 className="text-2xl font-bold text-slate-900">Hello, {name}!</h1>
+          <button onClick={handleLogout} className="text-xs text-slate-400 underline mt-1">Not you?</button>
         </div>
 
         {session && (

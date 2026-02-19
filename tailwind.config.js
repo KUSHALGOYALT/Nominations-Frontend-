@@ -4,10 +4,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        "hexa-primary": "#0F766E",
-        "hexa-secondary": "#14B8A6",
-        "hexa-dark": "#134E4A",
-        "hexa-light": "#F0FDFA",
+        "hexa-primary": "#1E40AF", // Royal Blue (blue-800)
+        "hexa-secondary": "#2563EB", // Lighter Royal Blue (blue-600)
+        "hexa-dark": "#172554", // Deep Blue (blue-950)
+        "hexa-light": "#EFF6FF", // Light Blue (blue-50)
       },
       fontFamily: {
         sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],

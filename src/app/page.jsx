@@ -35,9 +35,9 @@ function HomeContent() {
   }
 
   return (
-    <div className="min-h-screen text-slate-800 overflow-x-hidden" style={{ background: "linear-gradient(135deg, #eff6ff 0%, #dbwkff 0%, #eff6ff 100%)" }}>
-      {/* Note: Using a softer light blue gradient for the whole page */}
-      <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #60a5fa 40%, #ffffff 90%)" }} />
+    <div className="min-h-screen text-slate-800 overflow-x-hidden bg-white">
+      {/* Note: Using a clean white/blue corporate theme */}
+      <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
 
       {/* ══════════════════════════════════════════
           HERO
@@ -50,31 +50,31 @@ function HomeContent() {
             <img
               src="/hexa-logo.png"
               alt="Hexa Climate"
-              className="h-12 w-auto object-contain group-hover:opacity-90 transition-opacity"
+              className="h-16 w-auto object-contain group-hover:opacity-90 transition-opacity"
             />
           </a>
         </nav>
 
         {/* Hero Content */}
         <div className="relative flex-1 flex flex-col items-center justify-center text-center px-6 pb-24">
-          <p className="text-xs font-bold tracking-[0.25em] uppercase mb-4 text-blue-100">
+          <p className="text-xs font-bold tracking-[0.25em] uppercase mb-4 text-hexa-primary">
             Hexa Climate ✦ Fortnightly Goal Meeting
           </p>
 
-          <h1 className="text-5xl sm:text-7xl font-extrabold leading-tight mb-4 text-white drop-shadow-md">
-            <span className="text-white">Recognizing</span>
+          <h1 className="text-5xl sm:text-7xl font-extrabold leading-tight mb-4 text-slate-900 drop-shadow-sm">
+            <span className="text-hexa-primary">Recognizing</span>
             <br />
             Best Performance
           </h1>
 
-          <p className="text-base sm:text-lg text-blue-50 max-w-lg mx-auto mb-10 leading-relaxed font-medium">
+          <p className="text-base sm:text-lg text-slate-600 max-w-lg mx-auto mb-10 leading-relaxed font-medium">
             Based on self nomination & voting
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <button
               onClick={() => document.getElementById("admin-login")?.scrollIntoView({ behavior: "smooth" })}
-              className="group px-10 py-4 rounded-2xl font-semibold text-base text-blue-900 bg-white shadow-lg hover:bg-blue-50 transition-all hover:scale-105 active:scale-[0.98]"
+              className="group px-10 py-4 rounded-2xl font-semibold text-base text-white bg-hexa-primary shadow-lg hover:bg-hexa-secondary transition-all hover:scale-105 active:scale-[0.98]"
             >
               <span className="flex items-center gap-2">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" strokeLinecap="round" /></svg>

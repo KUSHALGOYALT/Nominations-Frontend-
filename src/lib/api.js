@@ -40,16 +40,17 @@ export function createParticipants(body, password) {
   }).then((r) => r.json());
 }
 
-export function checkParticipantToken(token) {
-  return fetch(`${API_BASE}/participants/check?token=${token}`).then((r) => r.json());
-}
-
-export function sendParticipantEmails(emails, password) {
-  return fetch(`${API_BASE}/participants/send-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${password}` },
-    body: JSON.stringify({ emails }),
-  }).then((r) => r.json());
+export async function joinSession(name) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: "Failed to join session" };
+  }
 }
 
 export function getNominations() {
@@ -61,18 +62,42 @@ export function GetNominees(token) {
   return Promise.resolve({ nominees: [] });
 }
 
-export function createNomination(token, nomineeName, reason) {
-  return fetch(`${API_BASE}/nominations/create`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, nominee_name: nomineeName, reason }),
-  }).then((r) => r.json());
+// Nominations
+export async function createNomination(nominatorName, nomineeName, reason) {
+  try {
+    const res = await fetch(`${API_BASE}/nominations/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nominator_name: nominatorName, nominee_name: nomineeName, reason }),
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: "Failed to submit nomination" };
+  }
 }
 
-export function createVote(token, nominationIds) {
-  return fetch(`${API_BASE}/votes/create`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, nomination_ids: nominationIds }),
-  }).then((r) => r.json());
+export async function deleteNomination(id, password) {
+  try {
+    const res = await fetch(`${API_BASE}/nominations/${id}/delete`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${password}` },
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: "Failed to delete nomination" };
+  }
+}
+
+// Votes
+export async function createVote(voterName, nominationIds) {
+  try {
+    const res = await fetch(`${API_BASE}/votes/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voter_name: voterName, nomination_ids: nominationIds }),
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: "Failed to submit vote" };
+  }
 }
