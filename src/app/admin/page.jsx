@@ -424,21 +424,17 @@ export default function AdminPage() {
                   </div>
                 </Card>
 
-                {/* 2) Votes (results) or Live Analytics (nominations) — only vote data in results */}
-                <Card icon={isResultsPhase ? "🗳️" : "📊"} title={isResultsPhase ? "Votes" : "Live Analytics"} subtitle={isResultsPhase ? "Votes per nominee" : "Nominations per nominee"}>
+                {/* 2) Votes per nominee — nothing else */}
+                <Card icon="🗳️" title="Votes" subtitle="Votes per nominee">
                   <div className="w-full">
-                    {displayData.length > 0 ? (
+                    {isResultsPhase && displayData.length > 0 ? (
                       <div className="space-y-4">
                         {displayData.map((entry, index) => {
                           const maxCount = Math.max(...displayData.map(d => d.count), 1);
                           const pct = (entry.count / maxCount) * 100;
                           const rankStyle = index === 0 ? "bg-amber-100 text-amber-700 border-amber-200" : index === 1 ? "bg-slate-100 text-slate-600 border-slate-200" : index === 2 ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-100";
                           const barStyle = index === 0 ? "bg-gradient-to-r from-amber-400 to-amber-500" : index === 1 ? "bg-gradient-to-r from-slate-300 to-slate-400" : index === 2 ? "bg-gradient-to-r from-amber-200 to-amber-300" : "bg-gradient-to-r from-blue-300 to-blue-400";
-                          const countLabel = isResultsPhase ? (entry.count === 1 ? "vote" : "votes") : (entry.count === 1 ? "nomination" : "nominations");
-                          // Medals only in results (vote ranking); in nomination phase show numbers so it's not confused with "winners"
-                          const rankBadge = isResultsPhase
-                            ? (index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1)
-                            : index + 1;
+                          const rankBadge = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1;
                           return (
                             <div key={entry.name} className="group">
                               <div className="flex items-center gap-3 mb-1.5">
@@ -446,7 +442,7 @@ export default function AdminPage() {
                                   {rankBadge}
                                 </span>
                                 <span className="font-semibold text-slate-800 truncate flex-1">{entry.name}</span>
-                                <span className="text-sm font-bold text-slate-600 tabular-nums">{entry.count} {countLabel}</span>
+                                <span className="text-sm font-bold text-slate-600 tabular-nums">{entry.count} {entry.count === 1 ? "vote" : "votes"}</span>
                               </div>
                               <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden ml-10">
                                 <div className={`h-full rounded-full transition-all duration-500 ${barStyle}`} style={{ width: `${pct}%`, minWidth: entry.count ? "8px" : "0" }} />
@@ -457,9 +453,8 @@ export default function AdminPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-dashed border-slate-200">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-3xl mb-4">📊</div>
-<p className="text-slate-600 font-medium">No nominations yet</p>
-        <p className="text-slate-400 text-sm mt-1">Nominations will appear here as participants submit their pitches.</p>
+                        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-3xl mb-4">🗳️</div>
+                        <p className="text-slate-600 font-medium">{isResultsPhase ? "No votes yet" : "Votes will appear here once voting is open."}</p>
                       </div>
                     )}
                     {isResultsPhase && (
