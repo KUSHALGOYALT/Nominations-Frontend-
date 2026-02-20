@@ -43,7 +43,7 @@ export default function AdminPage() {
 
   const [session, setSession] = useState(null);
   const [nominations, setNominations] = useState([]);
-  const [resultsData, setResultsData] = useState({ vote_counts: [], winners: [] });
+  const [resultsData, setResultsData] = useState({ vote_counts: [], winners: [], none_of_above_count: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -65,7 +65,7 @@ export default function AdminPage() {
     if (data.session && data.session.phase === "closed") {
       setSession(null);
       setNominations([]);
-      setResultsData({ vote_counts: [], winners: [] });
+      setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
       return data.session;
     }
     setSession(data.session ?? null);
@@ -91,20 +91,24 @@ export default function AdminPage() {
         try {
           const resResults = await fetch(`${apiBase}/results?session_id=${data.session.id}`).then(r => r.json());
           if (resResults && Array.isArray(resResults.vote_counts)) {
-            setResultsData({ vote_counts: resResults.vote_counts || [], winners: resResults.winners || [] });
+            setResultsData({
+              vote_counts: resResults.vote_counts || [],
+              winners: resResults.winners || [],
+              none_of_above_count: resResults.none_of_above_count ?? 0,
+            });
           } else {
-            setResultsData({ vote_counts: [], winners: [] });
+            setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
           }
         } catch (e) {
           console.error("Failed to load results", e);
-          setResultsData({ vote_counts: [], winners: [] });
+          setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
         }
       } else {
-        setResultsData({ vote_counts: [], winners: [] });
+        setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
       }
     } else {
       setNominations([]);
-      setResultsData({ vote_counts: [], winners: [] });
+      setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
     }
 
     return data.session;
@@ -146,7 +150,7 @@ export default function AdminPage() {
     }
     setSession(res.session);
     setNominations([]);
-    setResultsData({ vote_counts: [], winners: [] }); // New session has no results
+    setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
     setNewTitle("Fortnightly Goal Review");
     setNewDate("");
     showSuccess("Session created!");
@@ -349,7 +353,7 @@ export default function AdminPage() {
                 {session.phase === "closed" && (
                   <div className="flex flex-col items-end gap-2">
                     <button
-                      onClick={() => { setSession(null); setNominations([]); setResultsData({ vote_counts: [], winners: [] }); }}
+                      onClick={() => { setSession(null); setNominations([]); setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 }); }}
                       className="flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm hover:opacity-95 transition-all shadow-lg hover:shadow-blue-500/25 flex-shrink-0 bg-slate-700 hover:bg-slate-800 active:scale-95"
                     >
                       <span className="text-lg">➕</span>
@@ -388,7 +392,40 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                <Card icon="📊" title="Live Analytics" subtitle={isResultsPhase ? "Votes per nominee" : "Nominations per nominee"}>
+                {/* 1) Nominations first (before Votes) */}
+                <Card icon="📝" title="Manage Nominations" subtitle={`Total: ${nominations.length}`}>
+                  <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                    {nominations.length === 0 ? (
+                      <p className="text-center text-slate-500 py-8">No nominations yet.</p>
+                    ) : (
+                      nominations.map(n => (
+                        <div key={n.id} className="group flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm transition-all">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-800">{n.nominee_name}</span>
+                              <span className="text-xs text-slate-400">nominated by {n.nominator_name}</span>
+                            </div>
+                            <p className="text-sm text-slate-600 mt-1 leading-relaxed">"{n.reason}"</p>
+                          </div>
+                          {session.phase === "nomination" && (
+                            <button
+                              onClick={() => handleDeleteNomination(n.id)}
+                              className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title="Delete Nomination"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </Card>
+
+                {/* 2) Votes (results) or Live Analytics (nominations) — only vote data in results */}
+                <Card icon={isResultsPhase ? "🗳️" : "📊"} title={isResultsPhase ? "Votes" : "Live Analytics"} subtitle={isResultsPhase ? "Votes per nominee" : "Nominations per nominee"}>
                   <div className="w-full">
                     {displayData.length > 0 ? (
                       <div className="space-y-4">
@@ -425,35 +462,15 @@ export default function AdminPage() {
         <p className="text-slate-400 text-sm mt-1">Nominations will appear here as participants submit their pitches.</p>
                       </div>
                     )}
-                  </div>
-                </Card>
-
-                {/* Manage Nominations */}
-                <Card icon="📝" title="Manage Nominations" subtitle={`Total: ${nominations.length}`}>
-                  <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                    {nominations.length === 0 ? (
-                      <p className="text-center text-slate-500 py-8">No nominations yet.</p>
-                    ) : (
-                      nominations.map(n => (
-                        <div key={n.id} className="group flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm transition-all">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-800">{n.nominee_name}</span>
-                              <span className="text-xs text-slate-400">nominated by {n.nominator_name}</span>
-                            </div>
-                            <p className="text-sm text-slate-600 mt-1 leading-relaxed">"{n.reason}"</p>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteNomination(n.id)}
-                            className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            title="Delete Nomination"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </button>
+                    {isResultsPhase && (
+                      <div className="mt-4 pt-4 border-t border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-700">None of the above</span>
+                          <span className="text-sm font-bold text-slate-600 tabular-nums">
+                            {resultsData.none_of_above_count ?? 0} {(resultsData.none_of_above_count ?? 0) === 1 ? "vote" : "votes"}
+                          </span>
                         </div>
-                      ))
+                      </div>
                     )}
                   </div>
                 </Card>

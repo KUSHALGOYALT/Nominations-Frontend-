@@ -369,8 +369,7 @@ function VoteContent() {
         <div className="bg-hexa-light border border-blue-200 p-6 rounded-2xl text-center">
           <p className="text-2xl mb-2">✅</p>
           <h3 className="text-lg font-semibold text-hexa-primary">Pitch Submitted!</h3>
-          <p className="text-sm text-slate-600 mt-3">Thanks, {name}. When the admin opens voting, <strong>your pitch will appear as one of the options</strong> on the ballot. You can then vote for yourself, others, or None of the Above.</p>
-          <button onClick={() => setSuccess("")} className="text-xs text-hexa-secondary underline mt-4">Submit another?</button>
+          <p className="text-sm text-slate-600 mt-3">Thanks, {name}. You can only nominate once per session. When the admin opens voting, <strong>your pitch will appear as one of the options</strong> on the ballot. You can then vote for yourself, others, or None of the Above.</p>
         </div>
       );
     } else if (skippedNomination) {
