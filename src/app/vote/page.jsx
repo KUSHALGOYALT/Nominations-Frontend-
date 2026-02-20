@@ -292,8 +292,8 @@ function VoteContent() {
 
   // ── JOIN SCREEN (e.g. after scanning QR or opening /vote) ──
   if (!name) {
-    const phaseLower = (session.phase || "").toLowerCase();
-    const isSetup = phaseLower === "setup";
+    const phaseLower = (session.phase || "").toLowerCase().trim();
+    const isSetup = phaseLower === "setup" || !["nomination", "voting", "results", "closed"].includes(phaseLower);
     return (
       <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
         <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
@@ -344,11 +344,12 @@ function VoteContent() {
 
   /* ── Current Phase Component ── */
   let content = null;
-  const phase = (session?.phase || "").toLowerCase();
+  const phase = (session?.phase || "").toLowerCase().trim();
+  const isSetup = phase === "setup" || !["nomination", "voting", "results", "closed"].includes(phase);
 
   if (!session) {
     content = <p className="text-slate-500">No active session at the moment.</p>;
-  } else if (phase === "setup") {
+  } else if (isSetup) {
     content = (
       <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center">
         <p className="text-4xl mb-4">🕒</p>
