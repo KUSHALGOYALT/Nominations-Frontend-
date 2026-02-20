@@ -58,8 +58,19 @@ function VoteContent() {
   };
 
   useEffect(() => {
-    const storedName = typeof window !== "undefined" ? localStorage.getItem("hexa_name") : null;
-    if (storedName) setName(storedName);
+    // Per-session join: when URL has session_id, only use name if they joined THIS session before.
+    // New meeting = new session_id = no stored join = show "Enter your name". Never use another session's data.
+    if (typeof window !== "undefined") {
+      if (sessionIdFromUrl) {
+        const joinedName = localStorage.getItem(`hexa_join_${sessionIdFromUrl}`);
+        if (joinedName) setName(joinedName);
+        else setName(""); // New session or different person: clear so join form shows
+      } else {
+        const storedName = localStorage.getItem("hexa_name");
+        if (storedName) setName(storedName);
+        else setName("");
+      }
+    }
 
     if (urlError) {
       setLoading(false);
@@ -127,6 +138,26 @@ function VoteContent() {
       .finally(() => setNominationsLoading(false));
   }, [session?.phase, sessionIdFromUrl, session?.id]);
 
+  // When session in URL changes (new meeting), reset all in-page state so we never show previous meeting's data
+  useEffect(() => {
+    setHasNominated(false);
+    setHasVoted(false);
+    setSkippedNomination(false);
+    setNominations([]);
+    setSuccess("");
+    setError("");
+    setSelectedNominationIds([]);
+    setVoteNone(false);
+  }, [sessionIdFromUrl]);
+
+  // Pre-fill join form with last-used name when opening a new session (same device)
+  useEffect(() => {
+    if (sessionIdFromUrl && session && !name && typeof window !== "undefined") {
+      const lastName = localStorage.getItem("hexa_name");
+      if (lastName) setInputName(lastName);
+    }
+  }, [sessionIdFromUrl, session, name]);
+
   // Pre-fill pitch name with joined name when entering nomination phase
   useEffect(() => {
     if (name && (session?.phase || "").toLowerCase() === "nomination" && !nomineeName) {
@@ -138,12 +169,14 @@ function VoteContent() {
     e.preventDefault();
     if (!inputName.trim()) return;
 
-    // Save name locally
-    localStorage.setItem("hexa_name", inputName.trim());
-    setName(inputName.trim());
+    const trimmed = inputName.trim();
+    localStorage.setItem("hexa_name", trimmed);
+    if (sessionIdFromUrl) localStorage.setItem(`hexa_join_${sessionIdFromUrl}`, trimmed);
+    setName(trimmed);
   }
 
   function handleLogout() {
+    if (sessionIdFromUrl) localStorage.removeItem(`hexa_join_${sessionIdFromUrl}`);
     localStorage.removeItem("hexa_name");
     setName("");
     setInputName("");
