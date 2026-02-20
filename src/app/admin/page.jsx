@@ -60,12 +60,13 @@ export default function AdminPage() {
 
   const loadSession = useCallback(async () => {
     const data = await getSession();
-    // If session is closed, treat as null so we show the "Create New Session" form
+    // If session is closed, treat as null so we show the "Create New Session" form and clear old data
     if (data.session && data.session.phase === "closed") {
       setSession(null);
-    } else {
-      setSession(data.session ?? null);
+      setNominations([]);
+      return data.session;
     }
+    setSession(data.session ?? null);
 
     // Load nominations for this session only (so we never show a previous session's data)
     if (data.session) {
@@ -318,7 +319,7 @@ export default function AdminPage() {
                 {session.phase === "closed" && (
                   <div className="flex flex-col items-end gap-2">
                     <button
-                      onClick={() => setSession(null)}
+                      onClick={() => { setSession(null); setNominations([]); }}
                       className="flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm hover:opacity-95 transition-all shadow-lg hover:shadow-blue-500/25 flex-shrink-0 bg-slate-700 hover:bg-slate-800 active:scale-95"
                     >
                       <span className="text-lg">➕</span>
