@@ -67,18 +67,22 @@ export default function AdminPage() {
       setSession(data.session ?? null);
     }
 
-    // Load nominations for management/analytics
+    // Load nominations for this session only (so we never show a previous session's data)
     if (data.session) {
-      // We can reuse the public nominations endpoint or create a specific admin one
-      // For now using the existing one which returns all nominations
       try {
-        const res = await fetch(`${typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api") : ""}/nominations`).then(r => r.json());
+        const apiBase = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api") : "";
+        const res = await fetch(`${apiBase}/nominations?session_id=${data.session.id}`).then(r => r.json());
         if (res && res.nominations) {
           setNominations(res.nominations);
+        } else {
+          setNominations([]);
         }
       } catch (e) {
         console.error("Failed to load nominations", e);
+        setNominations([]);
       }
+    } else {
+      setNominations([]);
     }
 
     return data.session;
@@ -112,6 +116,7 @@ export default function AdminPage() {
       return;
     }
     setSession(res.session);
+    setNominations([]); // New session has no nominations — don't show previous session's data
     setNewTitle("Fortnightly Goal Review");
     setNewDate("");
     showSuccess("Session created!");
