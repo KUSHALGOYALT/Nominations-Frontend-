@@ -150,11 +150,11 @@ function VoteContent() {
     setVoteNone(false);
   }, [sessionIdFromUrl]);
 
-  // Pre-fill join form with last-used name when opening a new session (same device)
+  // Pre-fill join form with last-used name only when field is still empty (never overwrite what user typed)
   useEffect(() => {
     if (sessionIdFromUrl && session && !name && typeof window !== "undefined") {
       const lastName = localStorage.getItem("hexa_name");
-      if (lastName) setInputName(lastName);
+      if (lastName) setInputName(prev => (prev === "" ? lastName : prev));
     }
   }, [sessionIdFromUrl, session, name]);
 
