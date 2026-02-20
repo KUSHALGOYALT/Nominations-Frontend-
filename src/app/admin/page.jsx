@@ -43,6 +43,7 @@ export default function AdminPage() {
 
   const [session, setSession] = useState(null);
   const [nominations, setNominations] = useState([]);
+  const [resultsData, setResultsData] = useState({ vote_counts: [], winners: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -64,14 +65,16 @@ export default function AdminPage() {
     if (data.session && data.session.phase === "closed") {
       setSession(null);
       setNominations([]);
+      setResultsData({ vote_counts: [], winners: [] });
       return data.session;
     }
     setSession(data.session ?? null);
 
+    const apiBase = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api") : "";
+
     // Load nominations for this session only (so we never show a previous session's data)
     if (data.session) {
       try {
-        const apiBase = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api") : "";
         const res = await fetch(`${apiBase}/nominations?session_id=${data.session.id}`).then(r => r.json());
         if (res && res.nominations) {
           setNominations(res.nominations);
@@ -82,8 +85,26 @@ export default function AdminPage() {
         console.error("Failed to load nominations", e);
         setNominations([]);
       }
+
+      // In results phase, fetch vote-based results (live updating when polled)
+      if (data.session.phase === "results" || data.session.phase === "closed") {
+        try {
+          const resResults = await fetch(`${apiBase}/results?session_id=${data.session.id}`).then(r => r.json());
+          if (resResults && Array.isArray(resResults.vote_counts)) {
+            setResultsData({ vote_counts: resResults.vote_counts || [], winners: resResults.winners || [] });
+          } else {
+            setResultsData({ vote_counts: [], winners: [] });
+          }
+        } catch (e) {
+          console.error("Failed to load results", e);
+          setResultsData({ vote_counts: [], winners: [] });
+        }
+      } else {
+        setResultsData({ vote_counts: [], winners: [] });
+      }
     } else {
       setNominations([]);
+      setResultsData({ vote_counts: [], winners: [] });
     }
 
     return data.session;
@@ -124,7 +145,8 @@ export default function AdminPage() {
       return;
     }
     setSession(res.session);
-    setNominations([]); // New session has no nominations — don't show previous session's data
+    setNominations([]);
+    setResultsData({ vote_counts: [], winners: [] }); // New session has no results
     setNewTitle("Fortnightly Goal Review");
     setNewDate("");
     showSuccess("Session created!");
@@ -196,17 +218,18 @@ export default function AdminPage() {
     : "";
   const sessionUrl = session?.id ? `${apiUrl}/qr-join?session_id=${session.id}` : `${apiUrl}/qr-join`;
 
-  // Analytics Data Preparation
-  // We want to show nominations count per nominee
+  // Nominations-based chart (setup / nomination / voting)
   const chartData = nominations.reduce((acc, curr) => {
     const existing = acc.find(item => item.name === curr.nominee_name);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      acc.push({ name: curr.nominee_name, count: 1 });
-    }
+    if (existing) existing.count += 1;
+    else acc.push({ name: curr.nominee_name, count: 1 });
     return acc;
-  }, []).sort((a, b) => b.count - a.count).slice(0, 10); // Top 10
+  }, []).sort((a, b) => b.count - a.count).slice(0, 10);
+
+  // In results phase use vote counts and winners from API (live); otherwise use chartData
+  const isResultsPhase = session?.phase === "results" || session?.phase === "closed";
+  const displayData = isResultsPhase && resultsData.vote_counts.length > 0 ? resultsData.vote_counts : chartData;
+  const winners = resultsData.winners || [];
 
 
   return (
@@ -326,7 +349,7 @@ export default function AdminPage() {
                 {session.phase === "closed" && (
                   <div className="flex flex-col items-end gap-2">
                     <button
-                      onClick={() => { setSession(null); setNominations([]); }}
+                      onClick={() => { setSession(null); setNominations([]); setResultsData({ vote_counts: [], winners: [] }); }}
                       className="flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm hover:opacity-95 transition-all shadow-lg hover:shadow-blue-500/25 flex-shrink-0 bg-slate-700 hover:bg-slate-800 active:scale-95"
                     >
                       <span className="text-lg">➕</span>
@@ -344,41 +367,49 @@ export default function AdminPage() {
               {/* Main Content Column */}
               <div className={`space-y-6 ${session.phase !== 'closed' ? 'lg:col-span-2' : ''}`}>
 
-                {/* Winner Spotlight - Only in Results/Closed */}
-                {(session.phase === "results" || session.phase === "closed") && chartData.length > 0 && (
+                {/* Winner Spotlight - Results/Closed: vote-based, multiple winners when tied */}
+                {(session.phase === "results" || session.phase === "closed") && displayData.length > 0 && (
                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 border border-amber-100 shadow-sm text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300" />
                     <div className="relative z-10 flex flex-col items-center">
                       <div className="w-24 h-24 bg-gradient-to-br from-amber-300 to-amber-500 rounded-full flex items-center justify-center text-5xl shadow-xl mb-4 text-white ring-8 ring-white/50">
                         👑
                       </div>
-                      <h3 className="text-3xl font-extrabold text-slate-800 mb-1">{chartData[0].name}</h3>
+                      <h3 className="text-3xl font-extrabold text-slate-800 mb-1">
+                        {winners.length > 1 ? winners.join(" & ") : winners[0] || displayData[0].name}
+                      </h3>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 uppercase tracking-wider mb-4">
-                        🏆 Winner
+                        🏆 {winners.length > 1 ? "Winners" : "Winner"}
                       </span>
-                      <p className="text-slate-600 font-medium">{chartData[0].count} {chartData[0].count === 1 ? "nomination" : "nominations"}</p>
+                      <p className="text-slate-600 font-medium">
+                        {displayData[0].count} {displayData[0].count === 1 ? "vote" : "votes"}
+                      </p>
                     </div>
                   </div>
                 )}
 
-                <Card icon="📊" title="Live Analytics" subtitle="Nominations per nominee">
+                <Card icon="📊" title="Live Analytics" subtitle={isResultsPhase ? "Votes per nominee" : "Nominations per nominee"}>
                   <div className="w-full">
-                    {chartData.length > 0 ? (
+                    {displayData.length > 0 ? (
                       <div className="space-y-4">
-                        {chartData.map((entry, index) => {
-                          const maxCount = Math.max(...chartData.map(d => d.count), 1);
+                        {displayData.map((entry, index) => {
+                          const maxCount = Math.max(...displayData.map(d => d.count), 1);
                           const pct = (entry.count / maxCount) * 100;
-                          const isTop = index < 3;
                           const rankStyle = index === 0 ? "bg-amber-100 text-amber-700 border-amber-200" : index === 1 ? "bg-slate-100 text-slate-600 border-slate-200" : index === 2 ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-100";
                           const barStyle = index === 0 ? "bg-gradient-to-r from-amber-400 to-amber-500" : index === 1 ? "bg-gradient-to-r from-slate-300 to-slate-400" : index === 2 ? "bg-gradient-to-r from-amber-200 to-amber-300" : "bg-gradient-to-r from-blue-300 to-blue-400";
+                          const countLabel = isResultsPhase ? (entry.count === 1 ? "vote" : "votes") : (entry.count === 1 ? "nomination" : "nominations");
+                          // Medals only in results (vote ranking); in nomination phase show numbers so it's not confused with "winners"
+                          const rankBadge = isResultsPhase
+                            ? (index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1)
+                            : index + 1;
                           return (
                             <div key={entry.name} className="group">
                               <div className="flex items-center gap-3 mb-1.5">
                                 <span className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold border ${rankStyle}`}>
-                                  {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
+                                  {rankBadge}
                                 </span>
                                 <span className="font-semibold text-slate-800 truncate flex-1">{entry.name}</span>
-                                <span className="text-sm font-bold text-slate-600 tabular-nums">{entry.count} {entry.count === 1 ? "nomination" : "nominations"}</span>
+                                <span className="text-sm font-bold text-slate-600 tabular-nums">{entry.count} {countLabel}</span>
                               </div>
                               <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden ml-10">
                                 <div className={`h-full rounded-full transition-all duration-500 ${barStyle}`} style={{ width: `${pct}%`, minWidth: entry.count ? "8px" : "0" }} />
