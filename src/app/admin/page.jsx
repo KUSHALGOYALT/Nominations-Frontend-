@@ -95,6 +95,13 @@ export default function AdminPage() {
     }
   }, [loadSession, isAuthenticated]);
 
+  // Poll so Manage Nominations and Live Analytics update while in nomination/voting (new pitches appear)
+  useEffect(() => {
+    if (!session?.id || session.phase === "closed") return;
+    const t = setInterval(() => loadSession(), 4000);
+    return () => clearInterval(t);
+  }, [session?.id, session?.phase, loadSession]);
+
   function showSuccess(msg) { setSuccess(msg); setTimeout(() => setSuccess(""), 3500); }
 
   function handleUnauthorized() {
@@ -349,7 +356,7 @@ export default function AdminPage() {
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 uppercase tracking-wider mb-4">
                         🏆 Winner
                       </span>
-                      <p className="text-slate-600 font-medium">Secured {chartData[0].count} votes</p>
+                      <p className="text-slate-600 font-medium">{chartData[0].count} {chartData[0].count === 1 ? "nomination" : "nominations"}</p>
                     </div>
                   </div>
                 )}
@@ -371,7 +378,7 @@ export default function AdminPage() {
                                   {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
                                 </span>
                                 <span className="font-semibold text-slate-800 truncate flex-1">{entry.name}</span>
-                                <span className="text-sm font-bold text-slate-600 tabular-nums">{entry.count} {entry.count === 1 ? "vote" : "votes"}</span>
+                                <span className="text-sm font-bold text-slate-600 tabular-nums">{entry.count} {entry.count === 1 ? "nomination" : "nominations"}</span>
                               </div>
                               <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden ml-10">
                                 <div className={`h-full rounded-full transition-all duration-500 ${barStyle}`} style={{ width: `${pct}%`, minWidth: entry.count ? "8px" : "0" }} />
@@ -383,8 +390,8 @@ export default function AdminPage() {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-dashed border-slate-200">
                         <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-3xl mb-4">📊</div>
-                        <p className="text-slate-600 font-medium">No votes yet</p>
-                        <p className="text-slate-400 text-sm mt-1">Votes will appear here once participants cast their ballots.</p>
+<p className="text-slate-600 font-medium">No nominations yet</p>
+        <p className="text-slate-400 text-sm mt-1">Nominations will appear here as participants submit their pitches.</p>
                       </div>
                     )}
                   </div>
