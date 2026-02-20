@@ -123,13 +123,16 @@ function VoteContent() {
   // Poll session so when admin moves to voting, we show voting UI without refresh
   useEffect(() => {
     if (!session?.id) return;
-    const t = setInterval(loadSession, 5000);
+    const phase = (session?.phase || "").toLowerCase();
+    const ms = phase === "nomination" ? 3000 : 5000; // Poll faster in nomination so ballot appears sooner
+    const t = setInterval(loadSession, ms);
     return () => clearInterval(t);
-  }, [session?.id]);
+  }, [session?.id, session?.phase]);
 
   // When phase is voting, ensure we have nominations list (and refetch when session changes)
   useEffect(() => {
     if ((session?.phase || "").toLowerCase() !== "voting" || !session?.id) return;
+    setSuccess(""); // Clear nomination success so we show the ballot, not "Thanks for voting"
     const sid = sessionIdFromUrl || session.id;
     setNominations([]);
     setNominationsLoading(true);
@@ -428,9 +431,9 @@ function VoteContent() {
     }
   }
 
-  // Voting Phase
+  // Voting Phase — only show "Thanks for voting" when they actually voted (not when success is from nomination)
   else if (phase === "voting") {
-    if (hasVoted || success) {
+    if (hasVoted) {
       content = (
         <div className="bg-hexa-light border border-blue-200 p-6 rounded-2xl text-center">
           <p className="text-2xl mb-2">🗳️</p>
