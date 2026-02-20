@@ -187,13 +187,11 @@ export default function AdminPage() {
   const nextPhase = session ? getNextPhaseInfo(session.phase) : null;
   const phaseIdx = PHASES.indexOf(session?.phase || "setup");
 
-  // Use backend scan endpoint for QR code as requested
-  // This expects the backend to be at NEXT_PUBLIC_API_URL or default
+  // One QR/link per meeting: backend redirects to /vote?session_id=<id>
   const apiUrl = typeof window !== "undefined"
     ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api")
     : "";
-  // Updated path to avoid any confusion/caching: /qr-join
-  const sessionUrl = `${apiUrl}/qr-join`;
+  const sessionUrl = session?.id ? `${apiUrl}/qr-join?session_id=${session.id}` : `${apiUrl}/qr-join`;
 
   // Analytics Data Preparation
   // We want to show nominations count per nominee

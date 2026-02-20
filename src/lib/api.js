@@ -6,8 +6,9 @@ export function checkAdminPassword(password) {
   }).then((r) => ({ ok: r.ok, status: r.status }));
 }
 
-export function getSession() {
-  return fetch(`${API_BASE}/session`).then((r) => r.json());
+export function getSession(sessionId) {
+  const url = sessionId ? `${API_BASE}/session?session_id=${sessionId}` : `${API_BASE}/session`;
+  return fetch(url).then((r) => r.json());
 }
 
 export function createSession(body, password) {
@@ -53,8 +54,9 @@ export async function joinSession(name) {
   }
 }
 
-export function getNominations() {
-  return fetch(`${API_BASE}/nominations`).then((r) => r.json());
+export function getNominations(sessionId) {
+  const url = sessionId ? `${API_BASE}/nominations?session_id=${sessionId}` : `${API_BASE}/nominations`;
+  return fetch(url).then((r) => r.json());
 }
 
 export function GetNominees(token) {
@@ -63,12 +65,14 @@ export function GetNominees(token) {
 }
 
 // Nominations
-export async function createNomination(nominatorName, nomineeName, reason) {
+export async function createNomination(nominatorName, nomineeName, reason, sessionId) {
   try {
+    const body = { nominator_name: nominatorName, nominee_name: nomineeName, reason };
+    if (sessionId != null) body.session_id = sessionId;
     const res = await fetch(`${API_BASE}/nominations/create`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nominator_name: nominatorName, nominee_name: nomineeName, reason }),
+      body: JSON.stringify(body),
     });
     return await res.json();
   } catch (err) {
@@ -89,12 +93,14 @@ export async function deleteNomination(id, password) {
 }
 
 // Votes
-export async function createVote(voterName, nominationIds) {
+export async function createVote(voterName, nominationIds, sessionId) {
   try {
+    const body = { voter_name: voterName, nomination_ids: nominationIds };
+    if (sessionId != null) body.session_id = sessionId;
     const res = await fetch(`${API_BASE}/votes/create`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ voter_name: voterName, nomination_ids: nominationIds }),
+      body: JSON.stringify(body),
     });
     return await res.json();
   } catch (err) {

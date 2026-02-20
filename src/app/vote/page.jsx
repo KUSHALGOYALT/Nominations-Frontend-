@@ -12,6 +12,8 @@ import {
 function VoteContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const sessionIdFromUrl = searchParams.get("session_id") || null;
+  const urlError = searchParams.get("error");
 
   // Simple Name-based Auth
   const [name, setName] = useState("");
@@ -32,6 +34,7 @@ function VoteContent() {
   // Data for phases
   const [nominees, setNominees] = useState([]);
   const [nominations, setNominations] = useState([]);
+  const [nominationsLoading, setNominationsLoading] = useState(false);
 
   // Form state
   const [nomineeName, setNomineeName] = useState("");
@@ -40,12 +43,15 @@ function VoteContent() {
   const [voteNone, setVoteNone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const currentSessionId = sessionIdFromUrl || session?.id;
+
   const loadSession = () => {
-    getSession().then(data => {
+    getSession(sessionIdFromUrl).then(data => {
       if (data && data.session) {
         setSession(data.session);
         if ((data.session.phase || "").toLowerCase() === "voting") {
-          getNominations().then(res => setNominations(res.nominations || []));
+          const sid = sessionIdFromUrl || data.session.id;
+          getNominations(sid).then(res => setNominations(res.nominations || []));
         }
       }
     });
@@ -55,6 +61,15 @@ function VoteContent() {
     const storedName = typeof window !== "undefined" ? localStorage.getItem("hexa_name") : null;
     if (storedName) setName(storedName);
 
+    if (urlError) {
+      setLoading(false);
+      if (urlError === "missing_session") setError("This link is missing the meeting. Use the QR or link from your host.");
+      else if (urlError === "invalid_session") setError("This meeting link is invalid or the meeting no longer exists.");
+      else if (urlError === "session_ended") setError("This meeting has ended.");
+      else setError("Something went wrong. Try the link from your host again.");
+      return;
+    }
+
     let cancelled = false;
     const timeoutId = setTimeout(() => {
       if (cancelled) return;
@@ -62,31 +77,37 @@ function VoteContent() {
       setError("Taking too long — check your connection and try again.");
     }, 12000);
 
-    getSession()
+    getSession(sessionIdFromUrl)
       .then(data => {
         if (cancelled) return;
+        clearTimeout(timeoutId);
+        setLoading(false);
+        setError("");
         if (data?.session) {
           setSession(data.session);
           if ((data.session.phase || "").toLowerCase() === "voting") {
-            getNominations().then(res => !cancelled && setNominations(res.nominations || []));
+            setNominationsLoading(true);
+            const sid = sessionIdFromUrl || data.session.id;
+            getNominations(sid)
+              .then(res => {
+                if (!cancelled) setNominations(res.nominations || []);
+              })
+              .finally(() => { if (!cancelled) setNominationsLoading(false); });
           }
+        } else if (sessionIdFromUrl && (data?.error === "Session not found" || !data?.session)) {
+          setError("This meeting link is invalid or the meeting no longer exists.");
         }
-        setError("");
       })
       .catch(() => {
         if (!cancelled) {
-          setError("Couldn't load session. Check your connection or try again.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
           clearTimeout(timeoutId);
           setLoading(false);
+          setError("Couldn't load session. Check your connection or try again.");
         }
       });
 
     return () => { cancelled = true; clearTimeout(timeoutId); };
-  }, []);
+  }, [sessionIdFromUrl, urlError]);
 
   // Poll session so when admin moves to voting, we show voting UI without refresh
   useEffect(() => {
@@ -95,12 +116,16 @@ function VoteContent() {
     return () => clearInterval(t);
   }, [session?.id]);
 
-  // When phase is voting, ensure we have nominations list
+  // When phase is voting, ensure we have nominations list (and refetch when session changes)
   useEffect(() => {
-    if ((session?.phase || "").toLowerCase() === "voting") {
-      getNominations().then(res => setNominations(res.nominations || []));
-    }
-  }, [session?.phase]);
+    if ((session?.phase || "").toLowerCase() !== "voting" || !session?.id) return;
+    const sid = sessionIdFromUrl || session.id;
+    setNominations([]);
+    setNominationsLoading(true);
+    getNominations(sid)
+      .then(res => setNominations(res.nominations || []))
+      .finally(() => setNominationsLoading(false));
+  }, [session?.phase, sessionIdFromUrl, session?.id]);
 
   // Pre-fill pitch name with joined name when entering nomination phase
   useEffect(() => {
@@ -131,7 +156,7 @@ function VoteContent() {
     e.preventDefault();
     if (!nomineeName || !reason) return;
     setSubmitting(true);
-    const res = await createNomination(name, nomineeName, reason);
+    const res = await createNomination(name, nomineeName, reason, currentSessionId);
     setSubmitting(false);
     if (res.error) {
       setError(res.error);
@@ -149,7 +174,7 @@ function VoteContent() {
     setSubmitting(true);
     // Send empty list if None is selected
     const payload = voteNone ? [] : selectedNominationIds;
-    const res = await createVote(name, payload);
+    const res = await createVote(name, payload, currentSessionId);
     setSubmitting(false);
     if (res.error) {
       setError(res.error);
@@ -162,14 +187,17 @@ function VoteContent() {
   const handleRetry = () => {
     setError("");
     setLoading(true);
-    getSession()
+    getSession(sessionIdFromUrl)
       .then(data => {
         if (data?.session) {
           setSession(data.session);
           if ((data.session.phase || "").toLowerCase() === "voting") {
-            getNominations().then(res => setNominations(res.nominations || []));
+            setNominationsLoading(true);
+            getNominations(sessionIdFromUrl || data.session.id)
+              .then(res => setNominations(res.nominations || []))
+              .finally(() => setNominationsLoading(false));
           }
-        }
+        } else if (sessionIdFromUrl) setError("This meeting link is invalid or no longer exists.");
       })
       .catch(() => setError("Couldn't load session. Try again."))
       .finally(() => setLoading(false));
@@ -228,6 +256,8 @@ function VoteContent() {
 
   // ── JOIN SCREEN (e.g. after scanning QR or opening /vote) ──
   if (!name) {
+    const phaseLower = (session.phase || "").toLowerCase();
+    const isSetup = phaseLower === "setup";
     return (
       <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
         <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
@@ -237,9 +267,15 @@ function VoteContent() {
             <p className="text-slate-500 text-sm">
               Scanned the QR code? Enter your name below to join this recognition session.
             </p>
+            {isSetup && (
+              <p className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Session is in setup. Once the admin opens nominations, you can pitch or skip and vote later.
+              </p>
+            )}
             <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">Current Session</p>
               <p className="text-slate-800 font-medium">{session.title}</p>
+              <p className="text-xs text-slate-500 mt-1 capitalize">{phaseLower || "setup"} phase</p>
             </div>
           </div>
 
@@ -277,7 +313,13 @@ function VoteContent() {
   if (!session) {
     content = <p className="text-slate-500">No active session at the moment.</p>;
   } else if (phase === "setup") {
-    content = <div className="text-center py-8"><p className="text-xl">🕒</p><p className="mt-2 text-slate-500">Session is being set up. Check back soon!</p></div>;
+    content = (
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center">
+        <p className="text-4xl mb-4">🕒</p>
+        <h2 className="text-lg font-semibold text-slate-800 mb-2">Session is being set up</h2>
+        <p className="text-slate-600 text-sm">When the admin opens <strong>nominations</strong>, you’ll see a form here to submit your pitch (or skip and only vote). This page updates automatically every few seconds.</p>
+      </div>
+    );
   } else if (phase === "closed") {
     content = <div className="text-center py-8"><p className="text-xl">🔒</p><p className="mt-2 text-slate-500">This session is closed.</p></div>;
   } else if (phase === "results") {
@@ -291,7 +333,7 @@ function VoteContent() {
         <div className="bg-hexa-light border border-blue-200 p-6 rounded-2xl text-center">
           <p className="text-2xl mb-2">✅</p>
           <h3 className="text-lg font-semibold text-hexa-primary">Pitch Submitted!</h3>
-          <p className="text-sm text-slate-600 mt-3">Thanks, {name}. When the admin opens voting, you can vote here.</p>
+          <p className="text-sm text-slate-600 mt-3">Thanks, {name}. When the admin opens voting, <strong>your pitch will appear as one of the options</strong> on the ballot. You can then vote for yourself, others, or None of the Above.</p>
           <button onClick={() => setSuccess("")} className="text-xs text-hexa-secondary underline mt-4">Submit another?</button>
         </div>
       );
@@ -361,10 +403,44 @@ function VoteContent() {
           <p className="text-2xl mb-2">🗳️</p>
           <h3 className="text-lg font-semibold text-hexa-primary">Vote Cast</h3>
           <p className="text-sm text-slate-600 mt-1">Thanks for voting, {name}!</p>
+          <p className="text-xs text-slate-500 mt-3">You won’t be asked to nominate or vote again in this session.</p>
+        </div>
+      );
+    } else if (nominationsLoading) {
+      content = (
+        <div className="py-8 text-center">
+          <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin mx-auto" />
+          <p className="text-slate-500 text-sm mt-3">Loading vote options…</p>
         </div>
       );
     } else if (nominations.length === 0) {
-      content = <p className="text-slate-500 py-4">No nominations to vote on yet.</p>;
+      // No nominees: still show ballot with only "None of the Above" so they can cast a vote
+      content = (
+        <form onSubmit={handleSubmitVote} className="space-y-4 text-left">
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-sm text-amber-800 mb-4">
+            <p><strong>No one submitted a pitch</strong> in this session, so there are no nominees to choose from. You can still cast &quot;None of the Above&quot; below.</p>
+          </div>
+          <label className={`block p-4 rounded-xl border cursor-pointer transition-all ${voteNone ? "bg-red-50 border-red-300 shadow-sm" : "bg-white border-slate-200 hover:border-red-300"}`}>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={voteNone}
+                onChange={() => setVoteNone(prev => !prev)}
+                className="w-5 h-5 rounded border-slate-300 text-red-500 focus:ring-red-500 bg-white"
+              />
+              <span className="font-semibold text-slate-700">None of the Above</span>
+            </div>
+          </label>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <button
+            type="submit"
+            disabled={submitting || !voteNone}
+            className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-4 shadow-lg"
+          >
+            {submitting ? "Submitting..." : "Cast Vote"}
+          </button>
+        </form>
+      );
     } else {
       // Helper to handle checkbox changes
       const handleCheckboxChange = (id) => {
@@ -440,7 +516,7 @@ function VoteContent() {
   return (
     <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
       <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
-      <div className="max-w-md w-full bg-white border border-blue-100 rounded-3xl p-8 shadow-2xl shadow-blue-900/10">
+      <div className="relative z-10 max-w-md w-full bg-white border-2 border-slate-200 rounded-3xl p-8 shadow-xl">
         <div className="flex flex-col items-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-br from-hexa-primary to-hexa-secondary rounded-full flex items-center justify-center text-3xl shadow-lg mb-4 text-white">
             👋
@@ -460,8 +536,12 @@ function VoteContent() {
           </div>
         )}
 
-        <div className="min-h-[280px]">
-          {content}
+        <div className="min-h-[200px] w-full">
+          {content != null ? content : (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center text-sm text-amber-800">
+              <p>Nothing to show for this phase yet. The page will update when the admin changes the session.</p>
+            </div>
+          )}
         </div>
 
       </div>
