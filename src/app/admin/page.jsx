@@ -35,16 +35,6 @@ function getNextPhaseInfo(phase) {
 
 /* ═══════════════════════════════════════════════════════════ */
 /* ── UI Components ─────────────────────────────────────────── */
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell
-} from "recharts";
 
 /* ═══════════════════════════════════════════════════════════ */
 export default function AdminPage() {
@@ -358,28 +348,37 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                <Card icon="📊" title="Live Analytics" subtitle="Real-time nomination stats">
-                  <div className="h-[300px] w-full">
+                <Card icon="📊" title="Live Analytics" subtitle="Nominations per nominee">
+                  <div className="w-full">
                     {chartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
-                          <Tooltip
-                            cursor={{ fill: '#F1F5F9' }}
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                          />
-                          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                            {chartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={index === 0 && (session.phase === 'results' || session.phase === 'closed') ? '#F59E0B' : (index % 2 === 0 ? '#1E40AF' : '#2563EB')} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <div className="space-y-4">
+                        {chartData.map((entry, index) => {
+                          const maxCount = Math.max(...chartData.map(d => d.count), 1);
+                          const pct = (entry.count / maxCount) * 100;
+                          const isTop = index < 3;
+                          const rankStyle = index === 0 ? "bg-amber-100 text-amber-700 border-amber-200" : index === 1 ? "bg-slate-100 text-slate-600 border-slate-200" : index === 2 ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-100";
+                          const barStyle = index === 0 ? "bg-gradient-to-r from-amber-400 to-amber-500" : index === 1 ? "bg-gradient-to-r from-slate-300 to-slate-400" : index === 2 ? "bg-gradient-to-r from-amber-200 to-amber-300" : "bg-gradient-to-r from-blue-300 to-blue-400";
+                          return (
+                            <div key={entry.name} className="group">
+                              <div className="flex items-center gap-3 mb-1.5">
+                                <span className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold border ${rankStyle}`}>
+                                  {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
+                                </span>
+                                <span className="font-semibold text-slate-800 truncate flex-1">{entry.name}</span>
+                                <span className="text-sm font-bold text-slate-600 tabular-nums">{entry.count} {entry.count === 1 ? "vote" : "votes"}</span>
+                              </div>
+                              <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden ml-10">
+                                <div className={`h-full rounded-full transition-all duration-500 ${barStyle}`} style={{ width: `${pct}%`, minWidth: entry.count ? "8px" : "0" }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     ) : (
-                      <div className="flex items-center justify-center h-full text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                        <p>Waiting for nominations...</p>
+                      <div className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-dashed border-slate-200">
+                        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-3xl mb-4">📊</div>
+                        <p className="text-slate-600 font-medium">No votes yet</p>
+                        <p className="text-slate-400 text-sm mt-1">Votes will appear here once participants cast their ballots.</p>
                       </div>
                     )}
                   </div>

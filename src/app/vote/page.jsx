@@ -498,27 +498,34 @@ function VoteContent() {
       content = (
         <form onSubmit={handleSubmitVote} className="space-y-4 text-left">
           <div className="bg-hexa-light border border-blue-200 p-4 rounded-xl text-sm text-hexa-primary mb-4">
-            <p><strong>Instructions:</strong> Select up to <strong>3</strong> candidates OR select "None of the Above".</p>
+            <p><strong>Everyone can vote</strong> — whether you pitched or not.</p>
+            <p className="mt-1">Select up to <strong>3</strong> candidates (you can vote for yourself if you pitched) OR select "None of the Above".</p>
           </div>
 
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-            {nominations.map(n => (
-              <label key={n.id} className={`block p-4 rounded-xl border cursor-pointer transition-all ${selectedNominationIds.includes(n.id) ? "bg-blue-50 border-blue-400 shadow-sm" : "bg-white border-slate-200 hover:border-blue-300"}`}>
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedNominationIds.includes(n.id)}
-                    onChange={() => handleCheckboxChange(n.id)}
-                    disabled={voteNone}
-                    className="mt-1 w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white"
-                  />
-                  <div>
-                    <p className="font-semibold text-slate-900">{n.nominee_name}</p>
-                    <p className="text-sm text-slate-500 mt-1">"{n.reason}"</p>
+            {nominations.map(n => {
+              const isYou = name && String(n.nominee_name).trim().toLowerCase() === String(name).trim().toLowerCase();
+              return (
+                <label key={n.id} className={`block p-4 rounded-xl border cursor-pointer transition-all ${selectedNominationIds.includes(n.id) ? "bg-blue-50 border-blue-400 shadow-sm" : "bg-white border-slate-200 hover:border-blue-300"}`}>
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedNominationIds.includes(n.id)}
+                      onChange={() => handleCheckboxChange(n.id)}
+                      disabled={voteNone}
+                      className="mt-1 w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white"
+                    />
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {n.nominee_name}
+                        {isYou && <span className="ml-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">You</span>}
+                      </p>
+                      <p className="text-sm text-slate-500 mt-1">"{n.reason}"</p>
+                    </div>
                   </div>
-                </div>
-              </label>
-            ))}
+                </label>
+              );
+            })}
 
             {/* None of the Above Option */}
             <label className={`block p-4 rounded-xl border cursor-pointer transition-all ${voteNone ? "bg-red-50 border-red-300 shadow-sm" : "bg-white border-slate-200 hover:border-red-300"}`}>
