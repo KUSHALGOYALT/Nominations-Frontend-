@@ -491,6 +491,9 @@ export default function AdminPage() {
                         <p className="text-xs text-center text-slate-500 leading-relaxed">
                           Share this QR code or use the buttons below to invite participants.
                         </p>
+                        <p className="text-xs text-center text-slate-400 leading-relaxed">
+                          This link is for <strong>this session only</strong>. For a new meeting, close this session then create a new session to get a new link.
+                        </p>
 
                         <div className="grid grid-cols-2 gap-3 w-full pt-1">
                           <a
