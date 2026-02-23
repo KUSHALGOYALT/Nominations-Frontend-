@@ -463,20 +463,6 @@ export default function AdminPage() {
                       </div>
                     )}
 
-                    {/* Last: which nominee got how many votes — clear summary */}
-                    {isResultsPhase && resultsData.vote_counts.length > 0 && (
-                      <div className="mt-6 pt-4 border-t border-slate-200">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Vote count by nominee</p>
-                        <ul className="space-y-2">
-                          {resultsData.vote_counts.map((entry) => (
-                            <li key={entry.name} className="flex justify-between items-center text-sm">
-                              <span className="text-slate-800 font-medium">{entry.name}</span>
-                              <span className="text-slate-600 tabular-nums font-semibold">{entry.count} {entry.count === 1 ? "vote" : "votes"}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 </Card>
               </div>
