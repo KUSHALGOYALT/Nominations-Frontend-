@@ -449,7 +449,7 @@ export default function AdminPage() {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-dashed border-slate-200">
                         <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-3xl mb-4">🗳️</div>
-                        <p className="text-slate-600 font-medium">{isResultsPhase ? "No votes yet" : "Votes will appear here when you click Reveal Results."}</p>
+                        <p className="text-slate-600 font-medium">{isResultsPhase ? "No votes yet" : "Final Vote Count will appear here when admin closes Voting."}</p>
                       </div>
                     )}
                     {isResultsPhase && (
