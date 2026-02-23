@@ -70,10 +70,19 @@ export default function AdminPage() {
     }
     setSession(data.session ?? null);
 
-    const apiBase = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api") : "";
-
-    // Load nominations for this session only (so we never show a previous session's data)
+    // Results (vote_counts, winners, none_of_above_count) come only from GET /api/session response when phase is results/closed. No other API returns results.
     if (data.session) {
+      if (Array.isArray(data.vote_counts)) {
+        setResultsData({
+          vote_counts: data.vote_counts || [],
+          winners: data.winners || [],
+          none_of_above_count: data.none_of_above_count ?? 0,
+        });
+      } else {
+        setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
+      }
+
+      const apiBase = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "https://nominations-backend.onrender.com/api") : "";
       try {
         const res = await fetch(`${apiBase}/nominations?session_id=${data.session.id}`).then(r => r.json());
         if (res && res.nominations) {
@@ -84,27 +93,6 @@ export default function AdminPage() {
       } catch (e) {
         console.error("Failed to load nominations", e);
         setNominations([]);
-      }
-
-      // Only fetch results when admin has clicked Reveal Results (results/closed)
-      if (data.session.phase === "results" || data.session.phase === "closed") {
-        try {
-          const resResults = await fetch(`${apiBase}/results?session_id=${data.session.id}`).then(r => r.json());
-          if (resResults && Array.isArray(resResults.vote_counts)) {
-            setResultsData({
-              vote_counts: resResults.vote_counts || [],
-              winners: resResults.winners || [],
-              none_of_above_count: resResults.none_of_above_count ?? 0,
-            });
-          } else {
-            setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
-          }
-        } catch (e) {
-          console.error("Failed to load results", e);
-          setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
-        }
-      } else {
-        setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
       }
     } else {
       setNominations([]);
@@ -371,25 +359,31 @@ export default function AdminPage() {
               {/* Main Content Column */}
               <div className={`space-y-6 ${session.phase !== 'closed' ? 'lg:col-span-2' : ''}`}>
 
-                {/* Winner Spotlight - Results/Closed: vote-based, multiple winners when tied */}
-                {(session.phase === "results" || session.phase === "closed") && displayData.length > 0 && (
-                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 border border-amber-100 shadow-sm text-center relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300" />
-                    <div className="relative z-10 flex flex-col items-center">
-                      <div className="w-24 h-24 bg-gradient-to-br from-amber-300 to-amber-500 rounded-full flex items-center justify-center text-5xl shadow-xl mb-4 text-white ring-8 ring-white/50">
-                        👑
+                {/* Results: only when admin has clicked Reveal Results (phase results/closed) */}
+                {(session.phase === "results" || session.phase === "closed") && (
+                  <>
+                    {/* Winner(s) spotlight — multiple winners shown as "Name1 & Name2" with "Winners" badge */}
+                    {displayData.length > 0 && winners.length > 0 && (
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 border border-amber-100 shadow-sm text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300" />
+                        <div className="relative z-10 flex flex-col items-center">
+                          <div className="w-24 h-24 bg-gradient-to-br from-amber-300 to-amber-500 rounded-full flex items-center justify-center text-5xl shadow-xl mb-4 text-white ring-8 ring-white/50">
+                            👑
+                          </div>
+                          <h3 className="text-3xl font-extrabold text-slate-800 mb-1">
+                            {winners.length > 1 ? winners.join(" & ") : winners[0]}
+                          </h3>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 uppercase tracking-wider mb-4">
+                            🏆 {winners.length > 1 ? "Winners" : "Winner"}
+                          </span>
+                          <p className="text-slate-600 font-medium">
+                            {displayData[0].count} {displayData[0].count === 1 ? "vote" : "votes"}
+                            {winners.length > 1 ? " each" : ""}
+                          </p>
+                        </div>
                       </div>
-                      <h3 className="text-3xl font-extrabold text-slate-800 mb-1">
-                        {winners.length > 1 ? winners.join(" & ") : winners[0] || displayData[0].name}
-                      </h3>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 uppercase tracking-wider mb-4">
-                        🏆 {winners.length > 1 ? "Winners" : "Winner"}
-                      </span>
-                      <p className="text-slate-600 font-medium">
-                        {displayData[0].count} {displayData[0].count === 1 ? "vote" : "votes"}
-                      </p>
-                    </div>
-                  </div>
+                    )}
+                  </>
                 )}
 
                 {/* 1) Nominations first (before Votes) */}
@@ -466,6 +460,21 @@ export default function AdminPage() {
                             {resultsData.none_of_above_count ?? 0} {(resultsData.none_of_above_count ?? 0) === 1 ? "vote" : "votes"}
                           </span>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Last: which nominee got how many votes — clear summary */}
+                    {isResultsPhase && resultsData.vote_counts.length > 0 && (
+                      <div className="mt-6 pt-4 border-t border-slate-200">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Vote count by nominee</p>
+                        <ul className="space-y-2">
+                          {resultsData.vote_counts.map((entry) => (
+                            <li key={entry.name} className="flex justify-between items-center text-sm">
+                              <span className="text-slate-800 font-medium">{entry.name}</span>
+                              <span className="text-slate-600 tabular-nums font-semibold">{entry.count} {entry.count === 1 ? "vote" : "votes"}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     )}
                   </div>
