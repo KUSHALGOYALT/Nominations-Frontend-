@@ -61,7 +61,7 @@ export default function AdminPage() {
 
   const loadSession = useCallback(async () => {
     const data = await getSession();
-    // If session is closed, treat as null so we show the "Create New Session" form and clear old data
+    // If session is closed, treat as null and clear everything so no results/votes/nominations carry forward.
     if (data.session && data.session.phase === "closed") {
       setSession(null);
       setNominations([]);
@@ -70,7 +70,14 @@ export default function AdminPage() {
     }
     setSession(data.session ?? null);
 
-    // Results (vote_counts, winners, none_of_above_count) come only from GET /api/session response when phase is results/closed. No other API returns results.
+    // When no session (e.g. all closed or new), clear state so nothing carries forward.
+    if (!data.session) {
+      setNominations([]);
+      setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
+      return null;
+    }
+
+    // Results come only from GET /api/session when phase is results/closed.
     if (data.session) {
       if (Array.isArray(data.vote_counts)) {
         setResultsData({
@@ -94,9 +101,6 @@ export default function AdminPage() {
         console.error("Failed to load nominations", e);
         setNominations([]);
       }
-    } else {
-      setNominations([]);
-      setResultsData({ vote_counts: [], winners: [], none_of_above_count: 0 });
     }
 
     return data.session;
