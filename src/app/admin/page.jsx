@@ -86,8 +86,8 @@ export default function AdminPage() {
         setNominations([]);
       }
 
-      // In voting or results phase, fetch vote-based results (live updating when polled)
-      if (data.session.phase === "voting" || data.session.phase === "results" || data.session.phase === "closed") {
+      // Only fetch results when admin has clicked Reveal Results (results/closed)
+      if (data.session.phase === "results" || data.session.phase === "closed") {
         try {
           const resResults = await fetch(`${apiBase}/results?session_id=${data.session.id}`).then(r => r.json());
           if (resResults && Array.isArray(resResults.vote_counts)) {
@@ -230,8 +230,7 @@ export default function AdminPage() {
     return acc;
   }, []).sort((a, b) => b.count - a.count).slice(0, 10);
 
-  // Vote counts available during voting and results (live); winners only in results/closed
-  const isVotePhase = session?.phase === "voting" || session?.phase === "results" || session?.phase === "closed";
+  // Results (votes, winners) only after admin clicks Reveal Results
   const isResultsPhase = session?.phase === "results" || session?.phase === "closed";
   const displayData = isResultsPhase && resultsData.vote_counts.length > 0 ? resultsData.vote_counts : chartData;
   const winners = resultsData.winners || [];
@@ -429,7 +428,7 @@ export default function AdminPage() {
                 {/* 2) Votes per nominee — nothing else */}
                 <Card icon="🗳️" title="Votes" subtitle="Votes per nominee">
                   <div className="w-full">
-                    {isVotePhase && resultsData.vote_counts.length > 0 ? (
+                    {isResultsPhase && resultsData.vote_counts.length > 0 ? (
                       <div className="space-y-4">
                         {resultsData.vote_counts.map((entry, index) => {
                           const maxCount = Math.max(...resultsData.vote_counts.map(d => d.count), 1);
@@ -456,10 +455,10 @@ export default function AdminPage() {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-dashed border-slate-200">
                         <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-3xl mb-4">🗳️</div>
-                        <p className="text-slate-600 font-medium">{isVotePhase ? "No votes yet" : "Votes will appear here once voting is open."}</p>
+                        <p className="text-slate-600 font-medium">{isResultsPhase ? "No votes yet" : "Votes will appear here when you click Reveal Results."}</p>
                       </div>
                     )}
-                    {isVotePhase && (
+                    {isResultsPhase && (
                       <div className="mt-4 pt-4 border-t border-slate-200">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-slate-700">None of the above</span>
