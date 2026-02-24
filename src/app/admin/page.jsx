@@ -445,36 +445,48 @@ export default function AdminPage() {
 
                 {/* 1) Nominations: alphabetical, same nominee grouped with all nominators and pitches */}
                 <Card icon="📝" title="Manage Nominations" subtitle={`Total: ${nominations.length} (alphabetical)`}>
-                  <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                  <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-2">
                     {groupedNominations.length === 0 ? (
                       <p className="text-center text-slate-500 py-8">No nominations yet.</p>
                     ) : (
                       groupedNominations.map((group) => {
                         const nominatorsUnique = [...new Set(group.nominators)];
+                        const isSingle = group.pitches.length === 1;
                         return (
-                          <div key={group.nomineeName + nominatorsUnique.join(",")} className="p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-all">
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-800">{group.nomineeName}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">nominated by {nominatorsUnique.join(", ")}</p>
-                            </div>
-                            <div className="mt-3 space-y-2">
-                              {group.pitches.map((p, i) => (
-                                <div key={p.id} className="flex items-start justify-between gap-2 text-sm text-slate-600 pl-2 border-l-2 border-slate-200">
-                                  <p><span className="text-slate-500 font-medium">{p.by}:</span> "{p.text}"</p>
-                                  {session.phase === "nomination" && (
-                                    <button
-                                      onClick={() => handleDeleteNomination(p.id)}
-                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded flex-shrink-0"
-                                      title="Delete this nomination"
-                                    >
-                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
-                                      </svg>
-                                    </button>
-                                  )}
+                          <div key={group.nomineeName + nominatorsUnique.join(",")} className={isSingle ? "py-2 px-3 rounded-lg border border-slate-100 bg-white hover:border-slate-200 transition-all flex items-center justify-between gap-2" : "p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-all"}>
+                            {isSingle ? (
+                              <>
+                                <div className="min-w-0 flex-1 flex items-baseline gap-2 flex-wrap">
+                                  <span className="font-bold text-slate-800">{group.nomineeName}</span>
+                                  <span className="text-xs text-slate-500">by {group.pitches[0].by}</span>
+                                  <span className="text-sm text-slate-600 truncate max-w-md" title={group.pitches[0].text}>— "{group.pitches[0].text}"</span>
                                 </div>
-                              ))}
-                            </div>
+                                {session.phase === "nomination" && (
+                                  <button onClick={() => handleDeleteNomination(group.pitches[0].id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded flex-shrink-0" title="Delete">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-slate-800">{group.nomineeName}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">nominated by {nominatorsUnique.join(", ")}</p>
+                                </div>
+                                <div className="mt-3 space-y-2">
+                                  {group.pitches.map((p) => (
+                                    <div key={p.id} className="flex items-start justify-between gap-2 text-sm text-slate-600 pl-2 border-l-2 border-slate-200">
+                                      <p><span className="text-slate-500 font-medium">{p.by}:</span> "{p.text}"</p>
+                                      {session.phase === "nomination" && (
+                                        <button onClick={() => handleDeleteNomination(p.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded flex-shrink-0" title="Delete this nomination">
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            )}
                           </div>
                         );
                       })
