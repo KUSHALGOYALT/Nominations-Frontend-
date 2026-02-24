@@ -201,10 +201,18 @@ function VoteContent() {
     const slots = nominationChoice && typeof nominationChoice === "number" ? nominationSlots : [{ nomineeName, reason }];
     const filled = slots.filter(s => s.nomineeName?.trim() && s.reason?.trim());
     if (filled.length === 0) return;
+    // One submission per nominee per person (backend also enforces)
+    const seen = new Set();
+    const deduped = filled.filter((s) => {
+      const key = s.nomineeName.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     setSubmitting(true);
     setError("");
-    for (let i = 0; i < filled.length; i++) {
-      const res = await createNomination(name, filled[i].nomineeName.trim(), filled[i].reason.trim(), currentSessionId);
+    for (let i = 0; i < deduped.length; i++) {
+      const res = await createNomination(name, deduped[i].nomineeName.trim(), deduped[i].reason.trim(), currentSessionId);
       if (res.error) {
         setError(res.error);
         setSubmitting(false);
@@ -488,13 +496,22 @@ function VoteContent() {
             ))}
             <p className="text-xs text-slate-500">Fill at least one nominee. Empty blocks are ignored.</p>
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <button
-              type="submit"
-              disabled={submitting || !nominationSlots.some(s => s.nomineeName?.trim() && s.reason?.trim())}
-              className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 transition-colors shadow-lg"
-            >
-              {submitting ? "Submitting…" : "Submit nominations"}
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                type="submit"
+                disabled={submitting || !nominationSlots.some(s => s.nomineeName?.trim() && s.reason?.trim())}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 transition-colors shadow-lg"
+              >
+                {submitting ? "Submitting…" : "Submit nominations"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNominationChoice("skip"); setSkippedNomination(true); }}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors border border-slate-200"
+              >
+                Skip — I’ll just vote later
+              </button>
+            </div>
           </form>
         </div>
       );
