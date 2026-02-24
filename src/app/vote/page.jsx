@@ -308,6 +308,7 @@ function VoteContent() {
   if (!name) {
     const phaseLower = (session.phase || "").toLowerCase().trim();
     const isSetup = phaseLower === "setup" || !["nomination", "voting", "results", "closed"].includes(phaseLower);
+    const isNominationPhase = phaseLower === "nomination";
     return (
       <div className="min-h-screen text-slate-800 p-6 flex flex-col items-center justify-center bg-white">
         <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)" }} />
@@ -318,9 +319,12 @@ function VoteContent() {
               Scanned the QR code? Enter your name below to join this recognition session.
             </p>
             {isSetup && (
-              <p className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                Session is in setup. Once the admin opens nominations, you can pitch or skip and vote later.
-              </p>
+              <>
+                <p className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  Session is in setup. Once the admin opens nominations, you can pitch or skip and vote later.
+                </p>
+                <p className="mt-2 text-xs text-slate-500">When nominations open, you’ll choose how many to nominate (1, 2, or 3) or skip and just vote.</p>
+              </>
             )}
             <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">Current Session</p>
@@ -341,6 +345,35 @@ function VoteContent() {
                 required
               />
             </div>
+
+            {isNominationPhase && (
+              <div>
+                <label className="block text-sm font-bold text-black mb-2 uppercase tracking-wide">How many people do you want to nominate?</label>
+                <p className="text-xs text-slate-500 mb-2">You can nominate up to 3, or skip and only vote later.</p>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => {
+                        setNominationChoice(n);
+                        setNominationSlots(Array.from({ length: n }, () => ({ nomineeName: "", reason: "" })));
+                      }}
+                      className="px-4 py-2.5 rounded-xl font-semibold text-sm border-2 border-slate-200 text-slate-700 hover:border-hexa-primary hover:bg-hexa-light hover:text-hexa-primary transition-colors"
+                    >
+                      {n} {n === 1 ? "person" : "people"}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => { setNominationChoice("skip"); setSkippedNomination(true); }}
+                    className="px-4 py-2.5 rounded-xl font-semibold text-sm border-2 border-slate-200 text-slate-500 hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                  >
+                    Skip — just vote later
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
