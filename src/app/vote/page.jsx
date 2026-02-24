@@ -36,6 +36,10 @@ function VoteContent() {
   const [nominations, setNominations] = useState([]);
   const [nominationsLoading, setNominationsLoading] = useState(false);
 
+  // Nomination flow: choice (1, 2, 3, or skip) then slots
+  const [nominationChoice, setNominationChoice] = useState(null); // null | 1 | 2 | 3 | 'skip'
+  const [nominationSlots, setNominationSlots] = useState([]); // [{ nomineeName, reason }, ...]
+
   // Form state
   const [nomineeName, setNomineeName] = useState("");
   const [reason, setReason] = useState("");
@@ -146,6 +150,8 @@ function VoteContent() {
     setHasNominated(false);
     setHasVoted(false);
     setSkippedNomination(false);
+    setNominationChoice(null);
+    setNominationSlots([]);
     setNominations([]);
     setSuccess("");
     setError("");
@@ -186,20 +192,28 @@ function VoteContent() {
     setHasNominated(false);
     setHasVoted(false);
     setSkippedNomination(false);
+    setNominationChoice(null);
+    setNominationSlots([]);
   }
 
   async function handleSubmitNomination(e) {
     e.preventDefault();
-    if (!nomineeName || !reason) return;
+    const slots = nominationChoice && typeof nominationChoice === "number" ? nominationSlots : [{ nomineeName, reason }];
+    const filled = slots.filter(s => s.nomineeName?.trim() && s.reason?.trim());
+    if (filled.length === 0) return;
     setSubmitting(true);
-    const res = await createNomination(name, nomineeName, reason, currentSessionId);
-    setSubmitting(false);
-    if (res.error) {
-      setError(res.error);
-    } else {
-      setSuccess("Nomination submitted successfully!");
-      setHasNominated(true);
+    setError("");
+    for (let i = 0; i < filled.length; i++) {
+      const res = await createNomination(name, filled[i].nomineeName.trim(), filled[i].reason.trim(), currentSessionId);
+      if (res.error) {
+        setError(res.error);
+        setSubmitting(false);
+        return;
+      }
     }
+    setSubmitting(false);
+    setSuccess("Nomination(s) submitted!");
+    setHasNominated(true);
   }
 
   async function handleSubmitVote(e) {
@@ -369,41 +383,111 @@ function VoteContent() {
       content = (
         <div className="bg-hexa-light border border-blue-200 p-6 rounded-2xl text-center">
           <p className="text-2xl mb-2">✅</p>
-          <h3 className="text-lg font-semibold text-hexa-primary">Pitch Submitted!</h3>
-          <p className="text-sm text-slate-600 mt-3">Thanks, {name}. You can only nominate once per session. When the admin opens voting, <strong>your pitch will appear as one of the options</strong> on the ballot. You can then vote for yourself, others, or None of the Above.</p>
+          <h3 className="text-lg font-semibold text-hexa-primary">Nominations submitted!</h3>
+          <p className="text-sm text-slate-600 mt-3">Thanks, {name}. When the admin opens voting, your nominees will appear on the ballot. You can vote for up to 3 or None of the Above.</p>
         </div>
       );
-    } else if (skippedNomination) {
+    } else if (skippedNomination || nominationChoice === "skip") {
       content = (
         <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-center">
           <p className="text-2xl mb-2">👍</p>
-          <h3 className="text-lg font-semibold text-slate-800">No pitch — you’ll just vote</h3>
-          <p className="text-sm text-slate-600 mt-3">When the admin opens the voting phase, this page will show the ballot. You can stay here or come back later.</p>
+          <h3 className="text-lg font-semibold text-slate-800">You’ll just vote</h3>
+          <p className="text-sm text-slate-600 mt-3">When the admin opens voting, this page will show the ballot. You can stay here or come back later.</p>
+        </div>
+      );
+    } else if (nominationChoice === null) {
+      content = (
+        <div className="space-y-6 text-center">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1">How many people do you want to nominate?</h3>
+            <p className="text-sm text-slate-500">You can nominate up to 3 persons, or skip and only vote later.</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {[1, 2, 3].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  setNominationChoice(n);
+                  setNominationSlots(Array.from({ length: n }, () => ({ nomineeName: "", reason: "" })));
+                }}
+                className="px-6 py-3 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary transition-colors shadow-lg"
+              >
+                {n} {n === 1 ? "person" : "people"}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => { setNominationChoice("skip"); setSkippedNomination(true); }}
+              className="px-6 py-3 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+            >
+              Skip — I’ll just vote later
+            </button>
+          </div>
+        </div>
+      );
+    } else if (typeof nominationChoice === "number" && nominationSlots.length > 0) {
+      content = (
+        <div className="space-y-4 text-left">
+          <div className="bg-hexa-light border border-blue-200 p-4 rounded-xl text-sm text-hexa-primary mb-4">
+            <p><strong>Who do you want to nominate?</strong></p>
+            <p className="mt-1 text-slate-600">You can nominate up to 3 persons. Add name and pitch for each.</p>
+          </div>
+          <form onSubmit={handleSubmitNomination} className="space-y-6">
+            {nominationSlots.map((slot, idx) => (
+              <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase">Nominee {idx + 1}</p>
+                <input
+                  type="text"
+                  value={slot.nomineeName}
+                  onChange={(e) => setNominationSlots(prev => prev.map((s, i) => i === idx ? { ...s, nomineeName: e.target.value } : s))}
+                  placeholder="Name of person you’re nominating"
+                  className="w-full rounded-xl px-4 py-3 bg-white border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <textarea
+                  value={slot.reason}
+                  onChange={(e) => setNominationSlots(prev => prev.map((s, i) => i === idx ? { ...s, reason: e.target.value } : s))}
+                  placeholder="Their pitch / why nominate them"
+                  rows={3}
+                  className="w-full rounded-xl px-4 py-3 bg-white border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px] resize-y"
+                />
+              </div>
+            ))}
+            <p className="text-xs text-slate-500">Fill at least one nominee. Empty blocks are ignored.</p>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <button
+              type="submit"
+              disabled={submitting || !nominationSlots.some(s => s.nomineeName?.trim() && s.reason?.trim())}
+              className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 transition-colors shadow-lg"
+            >
+              {submitting ? "Submitting…" : "Submit nominations"}
+            </button>
+          </form>
         </div>
       );
     } else {
       content = (
         <div className="space-y-4 text-left">
           <div className="bg-hexa-light border border-blue-200 p-4 rounded-xl text-sm text-hexa-primary mb-4">
-            <p><strong>Pitch phase:</strong> Tell us why you should be recognized (optional).</p>
+            <p><strong>Who do you want to nominate?</strong> You can nominate up to 3 persons.</p>
           </div>
           <form onSubmit={handleSubmitNomination} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your name (for pitch)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Nominee name</label>
               <input
                 type="text"
                 value={nomineeName}
                 onChange={(e) => setNomineeName(e.target.value)}
-                placeholder="Same as join name or different..."
+                placeholder="Name of person you’re nominating"
                 className="w-full rounded-xl px-4 py-3 bg-white border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your pitch</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Their pitch</label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Why should people vote for you?"
+                placeholder="Why nominate them?"
                 rows={4}
                 className="w-full rounded-xl px-4 py-3 bg-white border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 min-h-[120px] resize-y"
               />
@@ -412,15 +496,15 @@ function VoteContent() {
             <button
               type="submit"
               disabled={submitting || !nomineeName?.trim() || !reason?.trim()}
-              className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+              className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary disabled:opacity-50 transition-colors shadow-lg"
             >
-              {submitting ? "Submitting…" : "Submit Pitch"}
+              {submitting ? "Submitting…" : "Submit"}
             </button>
           </form>
           <div className="pt-2 border-t border-slate-200 text-center">
             <button
               type="button"
-              onClick={() => setSkippedNomination(true)}
+              onClick={() => { setNominationChoice("skip"); setSkippedNomination(true); }}
               className="text-sm text-slate-500 hover:text-slate-700 underline"
             >
               Skip — I’ll just vote later

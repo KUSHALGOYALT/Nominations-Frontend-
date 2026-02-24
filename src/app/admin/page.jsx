@@ -33,6 +33,14 @@ function getNextPhaseInfo(phase) {
   return { next, label: labels[next], icon: icons[next] };
 }
 
+function getPrevPhaseInfo(phase) {
+  const prev = { nomination: "setup", voting: "nomination", results: "voting" }[phase];
+  if (!prev) return null;
+  const labels = { setup: "Back to Setup", nomination: "Back to Nominations", voting: "Back to Voting" };
+  const icons = { setup: "⬅️", nomination: "✉️", voting: "🗳️" };
+  return { prev, label: labels[prev], icon: icons[prev] };
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 /* ── UI Components ─────────────────────────────────────────── */
 
@@ -174,6 +182,23 @@ export default function AdminPage() {
     loadSession();
   }
 
+  async function handleGoBackPhase() {
+    const prevPhase = getPrevPhaseInfo(session?.phase);
+    if (!prevPhase || !session?.id) return;
+    setError("");
+    setAdvanceLoading(true);
+    const res = await patchSession({ session_id: session.id, phase: prevPhase.prev }, getAdminPassword());
+    setAdvanceLoading(false);
+    if (res.error) {
+      if (res.error === "Unauthorized") handleUnauthorized();
+      else { setError(res.error); if (res.error.includes("Cannot transition")) loadSession(); }
+      return;
+    }
+    setSession(res.session);
+    showSuccess(`Moved back to ${PHASE_LABELS[prevPhase.prev]}.`);
+    loadSession();
+  }
+
   // Delete Nomination
   async function handleDeleteNomination(id) {
     if (!confirm("Are you sure you want to delete this nomination?")) return;
@@ -206,6 +231,7 @@ export default function AdminPage() {
   /* ── Main panel ──────────── */
   const phaseInfo = PHASE_COLORS[session?.phase || "setup"];
   const nextPhase = session ? getNextPhaseInfo(session.phase) : null;
+  const prevPhase = session ? getPrevPhaseInfo(session.phase) : null;
   const phaseIdx = PHASES.indexOf(session?.phase || "setup");
 
   // One QR/link per meeting: backend redirects to /vote?session_id=<id>
@@ -221,6 +247,19 @@ export default function AdminPage() {
     else acc.push({ name: curr.nominee_name, count: 1 });
     return acc;
   }, []).sort((a, b) => b.count - a.count).slice(0, 10);
+
+  // Group nominations by nominee (case-insensitive): { nomineeName, nominators[], pitches: [{ by, text, id }] }, alphabetical
+  const groupedNominations = (() => {
+    const map = {};
+    nominations.forEach((n) => {
+      const key = (n.nominee_name || "").trim().toLowerCase();
+      if (!key) return;
+      if (!map[key]) map[key] = { nomineeName: n.nominee_name.trim(), nominators: [], pitches: [] };
+      map[key].nominators.push(n.nominator_name);
+      map[key].pitches.push({ by: n.nominator_name, text: n.reason, id: n.id });
+    });
+    return Object.values(map).sort((a, b) => a.nomineeName.localeCompare(b.nomineeName, undefined, { sensitivity: "base" }));
+  })();
 
   // Results (votes, winners) only after admin clicks Reveal Results
   const isResultsPhase = session?.phase === "results" || session?.phase === "closed";
@@ -329,16 +368,30 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {nextPhase && session.phase !== "closed" && (
-                  <div className="flex flex-col items-end gap-2">
-                    <button onClick={handleAdvancePhase} disabled={advanceLoading}
-                      className="flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm hover:opacity-95 disabled:opacity-50 transition-all shadow-lg hover:shadow-blue-500/25 flex-shrink-0 bg-hexa-primary hover:bg-hexa-secondary active:scale-95">
-                      {advanceLoading
-                        ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        : <span className="text-lg">{nextPhase.icon}</span>}
-                      {nextPhase.label}
-                    </button>
-                    <p className="text-xs text-slate-400 font-medium">Next Step</p>
+                {(nextPhase || prevPhase) && session.phase !== "closed" && (
+                  <div className="flex flex-col sm:flex-row items-end gap-3">
+                    {prevPhase && (
+                      <div className="flex flex-col items-end gap-2">
+                        <button onClick={handleGoBackPhase} disabled={advanceLoading}
+                          className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm hover:opacity-95 disabled:opacity-50 transition-all border-2 border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95">
+                          <span className="text-lg">{prevPhase.icon}</span>
+                          {prevPhase.label}
+                        </button>
+                        <p className="text-xs text-slate-400 font-medium">Go back</p>
+                      </div>
+                    )}
+                    {nextPhase && (
+                      <div className="flex flex-col items-end gap-2">
+                        <button onClick={handleAdvancePhase} disabled={advanceLoading}
+                          className="flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm hover:opacity-95 disabled:opacity-50 transition-all shadow-lg hover:shadow-blue-500/25 flex-shrink-0 bg-hexa-primary hover:bg-hexa-secondary active:scale-95">
+                          {advanceLoading
+                            ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            : <span className="text-lg">{nextPhase.icon}</span>}
+                          {nextPhase.label}
+                        </button>
+                        <p className="text-xs text-slate-400 font-medium">Next Step</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -390,35 +443,41 @@ export default function AdminPage() {
                   </>
                 )}
 
-                {/* 1) Nominations first (before Votes) */}
-                <Card icon="📝" title="Manage Nominations" subtitle={`Total: ${nominations.length}`}>
-                  <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                    {nominations.length === 0 ? (
+                {/* 1) Nominations: alphabetical, same nominee grouped with all nominators and pitches */}
+                <Card icon="📝" title="Manage Nominations" subtitle={`Total: ${nominations.length} (alphabetical)`}>
+                  <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                    {groupedNominations.length === 0 ? (
                       <p className="text-center text-slate-500 py-8">No nominations yet.</p>
                     ) : (
-                      nominations.map(n => (
-                        <div key={n.id} className="group flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm transition-all">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-800">{n.nominee_name}</span>
-                              <span className="text-xs text-slate-400">nominated by {n.nominator_name}</span>
+                      groupedNominations.map((group) => {
+                        const nominatorsUnique = [...new Set(group.nominators)];
+                        return (
+                          <div key={group.nomineeName + nominatorsUnique.join(",")} className="p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-all">
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-800">{group.nomineeName}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">nominated by {nominatorsUnique.join(", ")}</p>
                             </div>
-                            <p className="text-sm text-slate-600 mt-1 leading-relaxed">"{n.reason}"</p>
+                            <div className="mt-3 space-y-2">
+                              {group.pitches.map((p, i) => (
+                                <div key={p.id} className="flex items-start justify-between gap-2 text-sm text-slate-600 pl-2 border-l-2 border-slate-200">
+                                  <p><span className="text-slate-500 font-medium">{p.by}:</span> "{p.text}"</p>
+                                  {session.phase === "nomination" && (
+                                    <button
+                                      onClick={() => handleDeleteNomination(p.id)}
+                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded flex-shrink-0"
+                                      title="Delete this nomination"
+                                    >
+                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          {/* Delete only during nomination phase; hidden on voting/results/closed */}
-                          {session.phase === "nomination" && (
-                            <button
-                              onClick={() => handleDeleteNomination(n.id)}
-                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
-                              title="Delete nomination (only available while nominating)"
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </Card>
