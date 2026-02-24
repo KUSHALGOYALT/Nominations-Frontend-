@@ -444,7 +444,7 @@ export default function AdminPage() {
                 )}
 
                 {/* Nominations: grouped by nominee, one card per nominee */}
-                <Card icon="📝" title="Nominations" subtitle={`Total: ${nominations.length}`}>
+                <Card title="Nominations" subtitle={`Total: ${nominations.length}`}>
                   <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
                     {groupedNominations.length === 0 ? (
                       <p className="text-center text-slate-500 py-8">No nominations yet.</p>
@@ -457,7 +457,7 @@ export default function AdminPage() {
                             <div className="px-4 py-3 bg-white border-b border-slate-100 flex items-center justify-between gap-2">
                               <h4 className="font-bold text-slate-900 text-base">{group.nomineeName}</h4>
                               <span className="text-xs text-slate-500 font-medium">
-                                by {nominatorsUnique.join(", ")}
+                                nominated by {nominatorsUnique.join(", ")}
                               </span>
                             </div>
                             <div className="px-4 py-3 space-y-2">
