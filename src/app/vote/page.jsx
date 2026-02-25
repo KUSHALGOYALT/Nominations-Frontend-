@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   getSession,
@@ -48,6 +48,19 @@ function VoteContent() {
   const [submitting, setSubmitting] = useState(false);
 
   const currentSessionId = sessionIdFromUrl || session?.id;
+
+  // Unique nominees for ballot (case-insensitive): one row per person, one nomination ID per person for voting
+  const uniqueNominees = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const n of nominations) {
+      const key = (n.nominee_name || "").trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push({ displayName: (n.nominee_name || "").trim(), id: n.id });
+    }
+    return out;
+  }, [nominations]);
 
   const loadSession = () => {
     getSession(sessionIdFromUrl).then(data => {
@@ -583,7 +596,7 @@ function VoteContent() {
           <p className="text-slate-500 text-sm mt-3">Loading vote options…</p>
         </div>
       );
-    } else if (nominations.length === 0) {
+    } else if (uniqueNominees.length === 0) {
       // No nominees: still show ballot with only "None of the Above" so they can cast a vote
       content = (
         <form onSubmit={handleSubmitVote} className="space-y-4 text-left">
@@ -640,25 +653,22 @@ function VoteContent() {
           </div>
 
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-            {nominations.map(n => {
-              const isYou = name && String(n.nominee_name).trim().toLowerCase() === String(name).trim().toLowerCase();
+            {uniqueNominees.map((u) => {
+              const isYou = name && String(u.displayName).trim().toLowerCase() === String(name).trim().toLowerCase();
               return (
-                <label key={n.id} className={`block p-4 rounded-xl border cursor-pointer transition-all ${selectedNominationIds.includes(n.id) ? "bg-blue-50 border-blue-400 shadow-sm" : "bg-white border-slate-200 hover:border-blue-300"}`}>
-                  <div className="flex items-start gap-3">
+                <label key={u.id} className={`block p-4 rounded-xl border cursor-pointer transition-all ${selectedNominationIds.includes(u.id) ? "bg-blue-50 border-blue-400 shadow-sm" : "bg-white border-slate-200 hover:border-blue-300"}`}>
+                  <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
-                      checked={selectedNominationIds.includes(n.id)}
-                      onChange={() => handleCheckboxChange(n.id)}
+                      checked={selectedNominationIds.includes(u.id)}
+                      onChange={() => handleCheckboxChange(u.id)}
                       disabled={voteNone}
-                      className="mt-1 w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white"
+                      className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white"
                     />
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        {n.nominee_name}
-                        {isYou && <span className="ml-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">You</span>}
-                      </p>
-                      <p className="text-sm text-slate-500 mt-1">"{n.reason}"</p>
-                    </div>
+                    <p className="font-semibold text-slate-900">
+                      {u.displayName}
+                      {isYou && <span className="ml-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">You</span>}
+                    </p>
                   </div>
                 </label>
               );
