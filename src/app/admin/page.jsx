@@ -62,7 +62,11 @@ export default function AdminPage() {
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
+    document.body.classList.add("light-scrollbar");
     if (!window.sessionStorage.getItem("adminPassword")) router.replace("/");
+    return () => {
+      document.body.classList.remove("light-scrollbar");
+    };
   }, [mounted, router]);
 
   const isAuthenticated = typeof window !== "undefined" && !!window.sessionStorage.getItem("adminPassword");

@@ -182,6 +182,34 @@
   background: #2563EB;
 }
 
+/* ── Light Scrollbar (for Admin) ── */
+.light-scrollbar ::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+
+.light-scrollbar ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+.light-scrollbar ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* ── Internal Scrollbars ── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.light-scrollbar .custom-scrollbar::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+.light-scrollbar .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #94A3B8;
+}
+.light-scrollbar .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
+
 /* ── Phase / rank badges ── */
 .phase-badge {
   display: inline-flex;

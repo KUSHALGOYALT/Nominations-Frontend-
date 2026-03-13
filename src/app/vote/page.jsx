@@ -382,7 +382,7 @@ function VoteContent() {
                       }}
                       className="px-4 py-2.5 rounded-xl font-semibold text-sm border-2 border-slate-200 text-slate-700 hover:border-hexa-primary hover:bg-hexa-light hover:text-hexa-primary transition-colors"
                     >
-                      {n} {n === 1 ? "person" : "people"}
+                      {n === 1 ? "One" : n === 2 ? "Two" : "Three"}
                     </button>
                   ))}
                   <button
@@ -467,7 +467,7 @@ function VoteContent() {
                 }}
                 className="px-6 py-3 rounded-xl font-semibold text-white bg-hexa-primary hover:bg-hexa-secondary transition-colors shadow-lg"
               >
-                {n} {n === 1 ? "person" : "people"}
+                {n === 1 ? "One" : n === 2 ? "Two" : "Three"}
               </button>
             ))}
             <button
